@@ -4,14 +4,232 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>br.com.mss.identity</groupId>
-    <artifactId>Domino-Java-Desktop-legado</artifactId>
+    <groupId>br.com.mss.domino</groupId>
+    <artifactId>domino-client-desktop</artifactId>
     <version>1.0-SNAPSHOT</version>
+    <packaging>jar</packaging>
+
+    <name>Domino Java Desktop (legado)</name>
+    <description>
+        Cliente Swing do Dominó (Main/MainWindow, app, ui) + GrpcClientTransport + servers.json/descoberta
+        em LAN. Extraído do módulo domino-client-desktop do repositório Domino em 08/10/2026
+        (ADR-0031 do Domino). Consome domino-net-common e domino-server (e, por eles, domino-domain e
+        domino-proto) instalados no repositório Maven local a partir do checkout do Domino.
+    </description>
+
+    <!--
+      Projeto Maven autônomo (sem parent): o que antes vinha do agregador
+      br.com.mss.domino:domino está copiado aqui, com as mesmas versões e
+      configurações. domain/proto/net-common/server NÃO são código deste
+      repositório — instale-os antes, a partir do Domino:
+        (no Domino)  ./mvnw -B -ntp -DskipTests install
+      ${domino.version} precisa bater com a versão instalada (ver docs/compatibilidade.md).
+    -->
 
     <properties>
-        <maven.compiler.source>27</maven.compiler.source>
-        <maven.compiler.target>27</maven.compiler.target>
+        <main.class>br.com.mss.domino.Main</main.class>
+
+        <maven.compiler.release>21</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+        <!-- Artefatos do Domino (domain/proto/net-common/server). -->
+        <domino.version>1.0-SNAPSHOT</domino.version>
+
+        <!-- versões fixadas (copiadas do pom agregador do Domino @ acaefff) -->
+        <junit.version>5.11.4</junit.version>
+        <jqwik.version>1.9.2</jqwik.version>
+        <slf4j.version>2.0.16</slf4j.version>
+        <logback.version>1.5.16</logback.version>
+        <gson.version>2.11.0</gson.version>
+        <grpc.version>1.68.1</grpc.version>
+
+        <compiler-plugin.version>3.13.0</compiler-plugin.version>
+        <surefire-plugin.version>3.5.2</surefire-plugin.version>
+        <exec-plugin.version>3.5.0</exec-plugin.version>
+        <shade-plugin.version>3.6.0</shade-plugin.version>
+        <spotless-plugin.version>2.44.3</spotless-plugin.version>
+        <jacoco-plugin.version>0.8.12</jacoco-plugin.version>
     </properties>
 
+    <dependencies>
+        <dependency>
+            <groupId>br.com.mss.domino</groupId>
+            <artifactId>domino-net-common</artifactId>
+            <version>${domino.version}</version>
+        </dependency>
+        <!-- Compile scope, não test: Main embarca um GrpcHostTransport real
+             para o modo servidor embarcado (ADR-0020 do Domino) — única aresta
+             "cliente → servidor", deliberada (ADR-0026 do Domino; ver
+             docs/compatibilidade.md). -->
+        <dependency>
+            <groupId>br.com.mss.domino</groupId>
+            <artifactId>domino-server</artifactId>
+            <version>${domino.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>${slf4j.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>${logback.version}</version>
+        </dependency>
+        <!-- parsing do servers.json (ADR-0022 do Domino) -->
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>${gson.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>net.jqwik</groupId>
+            <artifactId>jqwik</artifactId>
+            <version>${jqwik.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Implementação real do transporte gRPC (Netty) do lado do canal
+             cliente — mesma razão do domino-server. -->
+        <dependency>
+            <groupId>io.grpc</groupId>
+            <artifactId>grpc-netty-shaded</artifactId>
+            <version>${grpc.version}</version>
+        </dependency>
+        <!-- GrpcClientTransportReconnectTest usa um serviço gRPC in-process
+             de mentira (sem depender de domino-server). -->
+        <dependency>
+            <groupId>io.grpc</groupId>
+            <artifactId>grpc-testing</artifactId>
+            <version>${grpc.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.grpc</groupId>
+            <artifactId>grpc-inprocess</artifactId>
+            <version>${grpc.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <finalName>domino-client</finalName>
+
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>${compiler-plugin.version}</version>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+
+        <plugins>
+            <!-- java.awt.headless: os testes não abrem janela nenhuma (Fase 5 do Domino). -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>${surefire-plugin.version}</version>
+                <configuration>
+                    <systemPropertyVariables>
+                        <java.awt.headless>true</java.awt.headless>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
+
+            <!-- Rodar pela linha de comando:
+                 cliente:  ./mvnw -q exec:java
+                 bancada:  ./mvnw -q test-compile exec:java@sandbox -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>${exec-plugin.version}</version>
+                <configuration>
+                    <mainClass>${main.class}</mainClass>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>sandbox</id>
+                        <configuration>
+                            <mainClass>br.com.mss.domino.ui.sandbox.BoardSandbox</mainClass>
+                            <classpathScope>test</classpathScope>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- jar único executável: java -jar target/domino-client.jar -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>${shade-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals><goal>shade</goal></goals>
+                        <configuration>
+                            <createDependencyReducedPom>false</createDependencyReducedPom>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <mainClass>${main.class}</mainClass>
+                                </transformer>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                            </transformers>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Formatação com gate (google-java-format), mesma configuração do
+                 agregador do Domino. `./mvnw spotless:apply` formata. -->
+            <plugin>
+                <groupId>com.diffplug.spotless</groupId>
+                <artifactId>spotless-maven-plugin</artifactId>
+                <version>${spotless-plugin.version}</version>
+                <configuration>
+                    <java>
+                        <googleJavaFormat/>
+                        <removeUnusedImports/>
+                        <trimTrailingWhitespace/>
+                        <endWithNewline/>
+                    </java>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>spotless-check</id>
+                        <phase>verify</phase>
+                        <goals><goal>check</goal></goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Sem mínimo de cobertura (ui/app não são testados por unidade
+                 neste projeto) — só relatório informativo, como no Domino. -->
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>${jacoco-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <id>prepare-agent</id>
+                        <goals><goal>prepare-agent</goal></goals>
+                    </execution>
+                    <execution>
+                        <id>report</id>
+                        <phase>verify</phase>
+                        <goals><goal>report</goal></goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
 </project>

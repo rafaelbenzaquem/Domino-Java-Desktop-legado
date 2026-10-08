@@ -1,0 +1,19 @@
+# Normaliza tudo para LF no repositório (independe de core.autocrlf da máquina).
+* text=auto eol=lf
+
+*.java   text eol=lf
+*.xml    text eol=lf
+*.yml    text eol=lf
+*.yaml   text eol=lf
+*.md     text eol=lf
+*.properties text eol=lf
+*.gitignore  text eol=lf
+*.editorconfig text eol=lf
+
+mvnw      text eol=lf
+mvnw.cmd  text eol=crlf
+
+# Binários conhecidos (não normalizar)
+*.jar    binary
+*.png    binary
+*.ico    binary

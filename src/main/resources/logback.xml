@@ -1,0 +1,31 @@
+<!--
+  Configuração de log padrão (SLF4J + Logback), carregada automaticamente do
+  classpath — sem chamada de init explícita. Sobrepor com
+  -Dlogback.configurationFile=<arquivo> se precisar.
+
+  charset="UTF-8" no encoder é o que evita o mojibake em console Windows com
+  codepage legado (437/1252): o appender escreve bytes UTF-8 de propósito;
+  quem precisar ver os acentos direito no cmd/PowerShell roda `chcp 65001`
+  antes (documentado no README).
+-->
+<configuration>
+
+  <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder>
+      <charset>UTF-8</charset>
+      <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%logger{36}] %msg%n</pattern>
+    </encoder>
+  </appender>
+
+  <!-- Todo o código do projeto em DEBUG; suba para TRACE para ver o rastro fino. -->
+  <logger name="br.com.mss.domino" level="DEBUG" />
+
+  <!-- O RMI é barulhento em DEBUG — deixa em WARN. -->
+  <logger name="sun.rmi" level="WARN" />
+  <logger name="javax.management" level="WARN" />
+
+  <root level="INFO">
+    <appender-ref ref="CONSOLE" />
+  </root>
+
+</configuration>

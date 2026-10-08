@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mesa de Dominó Divertida</title>
+    <style>
+        :root {
+            --table-color: #1a8c3d;
+            --table-border: #0b4a1f;
+            --bg-gradient-start: #3b1b4d;
+            --bg-gradient-end: #1d0f26;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, var(--bg-gradient-start), var(--bg-gradient-end));
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .game-area {
+            position: relative;
+            width: 90vw;
+            height: 90vh;
+            max-width: 1200px;
+            max-height: 800px;
+            display: grid;
+            grid-template-columns: 150px 1fr 150px;
+            grid-template-rows: 150px 1fr 150px;
+            gap: 10px;
+        }
+
+        /* Mesa Central */
+        .table-center {
+            grid-column: 2 / 3;
+            grid-row: 2 / 3;
+            background: radial-gradient(circle, #25ba53, var(--table-color));
+            border-radius: 150px;
+            border: 15px solid var(--table-border);
+            box-shadow: inset 0 0 40px rgba(0,0,0,0.5), 0 10px 30px rgba(0,0,0,0.7);
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Container de jogadores */
+        .player-slot {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .player-top { grid-column: 2 / 3; grid-row: 1 / 2; }
+        .player-bottom { grid-column: 2 / 3; grid-row: 3 / 4; }
+        .player-left { grid-column: 1 / 2; grid-row: 2 / 3; }
+        .player-right { grid-column: 3 / 4; grid-row: 2 / 3; }
+
+        /* Avatar e Info */
+        .avatar {
+            width: 70px;
+            height: 70px;
+            background: white;
+            border-radius: 50%;
+            border: 4px solid #fff;
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            margin-bottom: 5px;
+        }
+        
+        .avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .player-name {
+            font-size: 14px;
+            font-weight: bold;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 4px 10px;
+            border-radius: 10px;
+        }
+
+        /* Área de peças (Mão do jogador principal) */
+        .my-hand {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .domino {
+            width: 40px;
+            height: 80px;
+            background: white;
+            border-radius: 5px;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+            border: 1px solid #ccc;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .domino:hover {
+            transform: translateY(-10px);
+        }
+
+        .domino-half {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            color: black;
+            font-weight: bold;
+        }
+
+        .divider {
+            height: 2px;
+            background: #333;
+            width: 80%;
+            margin: 0 auto;
+        }
+
+        /* Botões do Jogo */
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            color: white;
+            background: #542287;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #7332b5;
+        }
+
+        .btn-menu {
+            background: #0078d7;
+            left: 20px;
+            right: auto;
+        }
+        .btn-menu:hover { background: #005a9e; }
+    </style>
+</head>
+<body>
+
+    <div class="game-area">
+        
+        <!-- Jogador Topo -->
+        <div class="player-slot player-top">
+            <div class="avatar"><img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="Avatar"></div>
+            <div class="player-name">Adversário 1</div>
+        </div>
+
+        <!-- Jogador Esquerda -->
+        <div class="player-slot player-left">
+            <div class="avatar"><img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka" alt="Avatar"></div>
+            <div class="player-name">Adversário 2</div>
+        </div>
+
+        <!-- Mesa Central onde as peças jogadas vão ficar -->
+        <div class="table-center">
+            <!-- As peças jogadas (DOM dinâmico) vão aqui via JavaScript -->
+        </div>
+
+        <!-- Jogador Direita -->
+        <div class="player-slot player-right">
+            <div class="avatar"><img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Liam" alt="Avatar"></div>
+            <div class="player-name">Adversário 3</div>
+        </div>
+
+        <!-- Você (Jogador Base) -->
+        <div class="player-slot player-bottom">
+            <div class="avatar"><img src="https://api.dicebear.com/7.x/avataaars/svg?seed=You" alt="Avatar"></div>
+            <div class="player-name">Você</div>
+            
+            <!-- Suas peças (Exemplo gerado por HTML) -->
+            <div class="my-hand">
+                <div class="domino" onclick="playDomino(this)">
+                    <div class="domino-half">5</div><div class="divider"></div><div class="domino-half">6</div>
+                </div>
+                <div class="domino" onclick="playDomino(this)">
+                    <div class="domino-half">3</div><div class="divider"></div><div class="domino-half">3</div>
+                </div>
+                <div class="domino" onclick="playDomino(this)">
+                    <div class="domino-half">1</div><div class="divider"></div><div class="domino-half">4</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Botões -->
+        <div class="controls btn-menu">
+            <button>Menu</button>
+        </div>
+        <div class="controls">
+            <button>Passar a vez</button>
+        </div>
+
+    </div>
+
+    <script>
+        // Lógica simples de UI para exemplificar a jogabilidade
+        function playDomino(element) {
+            // Remove a peça da mão
+            element.style.display = 'none';
+            alert("Peça jogada! (Conecte sua lógica de backend aqui)");
+            
+            // Aqui você pode adicionar lógica para transferir a peça (node) 
+            // para dentro da div '.table-center' com posicionamento absoluto.
+        }
+    </script>
+</body>
+</html>

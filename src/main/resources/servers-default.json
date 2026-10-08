@@ -1,0 +1,8 @@
+[
+  {
+    "name": "Local",
+    "host": "localhost",
+    "port": 1099,
+    "default": true
+  }
+]
