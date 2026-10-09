@@ -27,6 +27,14 @@ public final class LocalProfileStore implements ProfileStore {
     this(Preferences.userNodeForPackage(LocalProfileStore.class).node("profiles"));
   }
 
+  /**
+   * Perfis de jogador do perfil local de dados {@code dataProfile} (M1): cada janela aberta tem os
+   * seus; o perfil local padrão usa o mesmo nó de antes.
+   */
+  public LocalProfileStore(DataProfile dataProfile) {
+    this(dataProfile.node("profiles"));
+  }
+
   LocalProfileStore(Preferences root) {
     this.root = root;
   }
