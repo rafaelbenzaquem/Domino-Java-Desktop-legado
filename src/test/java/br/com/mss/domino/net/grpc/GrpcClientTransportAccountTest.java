@@ -163,6 +163,10 @@ class GrpcClientTransportAccountTest {
 
     fake.createFailure = Status.UNAVAILABLE.withDescription("identidade MSS indisponível");
     assertEquals(Reason.IDENTITY_UNAVAILABLE_ON_SERVER, createFails(t).reason());
+
+    fake.createFailure =
+        Status.FAILED_PRECONDITION.withDescription("esta conta já ocupa um lugar nesta partida");
+    assertEquals(Reason.ALREADY_SEATED, createFails(t).reason());
   }
 
   @Test

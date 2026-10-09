@@ -99,6 +99,18 @@ class GrpcErrorsTest {
   }
 
   @Test
+  void mesmaContaJaSentadaNaPartidaTemMensagemPropria() {
+    AccountRefusedException e =
+        mss(
+            Status.FAILED_PRECONDITION.withDescription(
+                "esta conta já ocupa um lugar nesta partida"));
+
+    assertEquals(Reason.ALREADY_SEATED, e.reason());
+    assertTrue(e.getMessage().contains("já ocupa um lugar nesta partida"));
+    assertFalse(e.requiresSignIn());
+  }
+
+  @Test
   void falhaLocalPreservaAMensagemDaIdentidade() {
     CredentialException local =
         new CredentialException(

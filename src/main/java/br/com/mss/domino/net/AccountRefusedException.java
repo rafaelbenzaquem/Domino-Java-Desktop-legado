@@ -23,6 +23,8 @@ public final class AccountRefusedException extends TransportException {
     IDENTITY_UNAVAILABLE_ON_SERVER,
     /** O assento (token salvo) pertence a outra conta MSS. */
     SEAT_OF_OTHER_ACCOUNT,
+    /** Esta conta já ocupa um lugar na partida (outra janela ou dispositivo). */
+    ALREADY_SEATED,
     /** A identidade não renovou a sessão local (expirada/revogada): entrar de novo. */
     LOCAL_SESSION_ENDED,
     /** Este computador não conseguiu falar com a identidade MSS. */

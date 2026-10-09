@@ -28,6 +28,8 @@ import java.util.Optional;
  *       Reason#ACCOUNT_RESTRICTED};
  *   <li>{@code PERMISSION_DENIED} "assento pertence a outra conta" → {@link
  *       Reason#SEAT_OF_OTHER_ACCOUNT};
+ *   <li>{@code FAILED_PRECONDITION} "esta conta já ocupa um lugar nesta partida" → {@link
+ *       Reason#ALREADY_SEATED};
  *   <li>{@code UNAVAILABLE} "identidade MSS indisponível" → {@link
  *       Reason#IDENTITY_UNAVAILABLE_ON_SERVER}.
  * </ul>
@@ -61,6 +63,10 @@ public final class GrpcErrors {
   static final String SEAT_OF_OTHER_ACCOUNT =
       "Este assento pertence a outra conta MSS. Entre com a conta que ocupou o assento, ou escolha"
           + " outra partida.";
+
+  static final String ALREADY_SEATED =
+      "Esta conta MSS já ocupa um lugar nesta partida (talvez em outra janela ou outro"
+          + " dispositivo). Volte por onde entrou, ou entre com outra conta.";
 
   static final String IDENTITY_UNAVAILABLE =
       "O serviço de identidade MSS está indisponível para o servidor de jogo agora. Tente"
@@ -114,6 +120,10 @@ public final class GrpcErrors {
         }
         yield Optional.empty();
       }
+      case FAILED_PRECONDITION ->
+          mentions(description, "já ocupa um lugar")
+              ? refusal(Reason.ALREADY_SEATED, ALREADY_SEATED, cause)
+              : Optional.empty();
       case UNAVAILABLE ->
           mentions(description, "identidade")
               ? refusal(Reason.IDENTITY_UNAVAILABLE_ON_SERVER, IDENTITY_UNAVAILABLE, cause)
