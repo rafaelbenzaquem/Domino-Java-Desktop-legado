@@ -5,6 +5,7 @@ import br.com.mss.domino.net.NetworkConfig;
 import br.com.mss.domino.net.config.ServerDirectory;
 import br.com.mss.domino.net.config.ServerPreset;
 import java.util.Optional;
+import java.util.function.UnaryOperator;
 
 /**
  * Lógica pura de resolução do servidor (ADR-0022) — sem Swing, sem rede, só decide a partir do que
@@ -24,13 +25,30 @@ public final class ConnectionResolver {
    */
   public static ServerPreset resolveDefault(
       ServerPreset cliServer, ServerDirectory directory, ServerChoiceStore savedChoice) {
+    return resolveDefault(cliServer, directory, savedChoice, ServerDirectory::withOfficialIdentity);
+  }
+
+  /**
+   * Como {@link #resolveDefault(ServerPreset, ServerDirectory, ServerChoiceStore)}; {@code upgrade}
+   * atualiza uma escolha salva antiga (oficial sem identidade MSS → preset oficial com identidade,
+   * M1), e a escolha atualizada é regravada.
+   */
+  static ServerPreset resolveDefault(
+      ServerPreset cliServer,
+      ServerDirectory directory,
+      ServerChoiceStore savedChoice,
+      UnaryOperator<ServerPreset> upgrade) {
     if (cliServer != null) {
       return cliServer;
     }
     if (savedChoice != null) {
       Optional<ServerPreset> remembered = savedChoice.lastChoice();
       if (remembered.isPresent()) {
-        return remembered.get();
+        ServerPreset current = upgrade.apply(remembered.get());
+        if (!current.equals(remembered.get())) {
+          savedChoice.remember(current);
+        }
+        return current;
       }
     }
     return directory

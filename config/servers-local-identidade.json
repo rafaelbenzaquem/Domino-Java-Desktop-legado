@@ -1,0 +1,18 @@
+[
+  {
+    "name": "Local (conta MSS)",
+    "host": "localhost",
+    "port": 1099,
+    "default": true,
+    "tls": false,
+    "identity": "localhost:9100",
+    "identityTls": false
+  },
+  {
+    "name": "Local (sem conta)",
+    "host": "localhost",
+    "port": 1099,
+    "default": false,
+    "tls": false
+  }
+]

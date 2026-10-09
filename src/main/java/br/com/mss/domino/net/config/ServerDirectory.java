@@ -23,11 +23,17 @@ import org.slf4j.LoggerFactory;
  *       #EXTERNAL_FILE_PROPERTY}, senão {@value #DEFAULT_EXTERNAL_FILE} no diretório de trabalho) —
  *       se existir e for válido, <b>substitui</b> a lista inteira, sem mesclar com a embutida;
  *   <li>senão, o {@code servers.json} embutido no {@code .jar} ({@value #BUNDLED_RESOURCE}), que
- *       traz o preset "Local" apontando para {@code localhost:1099}.
+ *       traz o preset "Local" ({@code localhost:1099}, padrão) e o "Oficial" ({@code
+ *       domino.minashonsoftware.com.br:443}, TLS, com a identidade MSS de produção — Domino:M6-06,
+ *       M1 deste repositório).
  * </ol>
  *
  * <p>{@code official} só é aceito do embutido e com {@code tls: true} (M6-02, ADR-0030): num
  * arquivo externo ele é ignorado, e um preset oficial sem TLS perde a marca, com aviso no log.
+ *
+ * <p>{@code identity} ({@code host:porta}) e {@code identityTls} (padrão {@code true}) são
+ * opcionais (M1): com eles, o servidor exige conta MSS. Texto claro na identidade só para
+ * localhost; um destino inválido invalida o arquivo inteiro (cai para o embutido, com aviso).
  *
  * <p>Nunca lança: um arquivo externo malformado só gera um aviso no log e cai para o embutido; se
  * até o embutido faltar/for inválido, a lista fica vazia (quem chama decide o que fazer — ver
@@ -71,8 +77,11 @@ public final class ServerDirectory {
     Path external = Path.of(System.getProperty(EXTERNAL_FILE_PROPERTY, DEFAULT_EXTERNAL_FILE));
     if (Files.isRegularFile(external)) {
       try {
+        ServerDirectory bundled = loadBundled();
         List<ServerPreset> parsed =
-            parse(Files.readString(external, StandardCharsets.UTF_8), false);
+            parse(Files.readString(external, StandardCharsets.UTF_8), false).stream()
+                .map(p -> withOfficialIdentity(p, bundled))
+                .toList();
         LOG.info(
             "servers.json externo carregado de {} ({} servidor(es))",
             external.toAbsolutePath(),
@@ -112,6 +121,29 @@ public final class ServerDirectory {
             .anyMatch(p -> p.official() && p.host().equalsIgnoreCase(host) && p.port() == port);
   }
 
+  /**
+   * Atualiza um registro antigo (escolha salva, {@code servers.json} externo) que aponta para o
+   * servidor oficial <b>sem</b> identidade MSS: devolve o preset oficial do catálogo embutido, com
+   * a identidade dele (o oficial só aceita conta MSS). Qualquer outro preset volta inalterado.
+   */
+  public static ServerPreset withOfficialIdentity(ServerPreset preset) {
+    return withOfficialIdentity(preset, loadBundled());
+  }
+
+  static ServerPreset withOfficialIdentity(ServerPreset preset, ServerDirectory bundled) {
+    if (preset == null || preset.identity() != null || !preset.tls()) {
+      return preset;
+    }
+    return bundled.presets().stream()
+        .filter(p -> p.official() && p.identity() != null && p.sameEndpoint(preset))
+        .findFirst()
+        .map(
+            p ->
+                new ServerPreset(
+                    p.name(), p.host(), p.port(), preset.isDefault(), true, true, p.identity()))
+        .orElse(preset);
+  }
+
   private static List<ServerPreset> parse(String json, boolean allowOfficial) {
     Type type = new TypeToken<List<ServerPresetJson>>() {}.getType();
     List<ServerPresetJson> raw = new Gson().fromJson(json, type);
@@ -123,7 +155,8 @@ public final class ServerDirectory {
 
   /**
    * DTO só para o Gson — {@code default} é palavra reservada em Java, não dá para usar como nome de
-   * componente de record.
+   * componente de record. {@code identityTls} é {@link Boolean} para distinguir ausente (TLS) de
+   * {@code false}.
    */
   private record ServerPresetJson(
       String name,
@@ -131,7 +164,9 @@ public final class ServerDirectory {
       int port,
       @SerializedName("default") boolean isDefault,
       boolean tls,
-      boolean official) {
+      boolean official,
+      String identity,
+      Boolean identityTls) {
     ServerPreset toPreset(boolean allowOfficial) {
       boolean keepOfficial = official && allowOfficial && tls;
       if (official && !keepOfficial) {
@@ -140,7 +175,19 @@ public final class ServerDirectory {
             name,
             allowOfficial ? "sem tls" : "arquivo externo");
       }
-      return new ServerPreset(name, host, port, isDefault, tls, keepOfficial);
+      IdentityTarget target = null;
+      if (identity != null && !identity.isBlank()) {
+        try {
+          target = IdentityTarget.parse(identity, identityTls == null || identityTls);
+        } catch (IllegalArgumentException e) {
+          throw new JsonParseException(e.getMessage(), e);
+        }
+        if (!target.plaintextAllowed()) {
+          throw new JsonParseException(
+              "identidade sem TLS só é permitida em localhost: " + target.authority());
+        }
+      }
+      return new ServerPreset(name, host, port, isDefault, tls, keepOfficial, target);
     }
   }
 }
