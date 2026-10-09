@@ -11,6 +11,7 @@ import java.awt.FlowLayout;
 import java.awt.Window;
 import java.time.Duration;
 import java.util.List;
+import java.util.Objects;
 import javax.swing.DefaultListCellRenderer;
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
@@ -64,12 +65,23 @@ public final class ServerPickerDialog extends JDialog {
     if (target == null) {
       return;
     }
+    // M1: o mesmo host:porta pode aparecer com e sem conta MSS ("Local (conta MSS)" e "Local
+    // (sem conta)"); prefere o que bate também a identidade.
+    int hostPortMatch = -1;
     for (int i = 0; i < model.size(); i++) {
       ServerPreset preset = model.get(i);
       if (preset.host().equals(target.host()) && preset.port() == target.port()) {
-        list.setSelectedIndex(i);
-        return;
+        if (Objects.equals(preset.identity(), target.identity())) {
+          list.setSelectedIndex(i);
+          return;
+        }
+        if (hostPortMatch < 0) {
+          hostPortMatch = i;
+        }
       }
+    }
+    if (hostPortMatch >= 0) {
+      list.setSelectedIndex(hostPortMatch);
     }
   }
 
@@ -198,7 +210,8 @@ public final class ServerPickerDialog extends JDialog {
   }
 
   /**
-   * {@code "<nome> (<host>:<porta>)"} — [TLS] marca conexão cifrada (M6-02); ★, o preset padrão.
+   * {@code "<nome> (<host>:<porta>)"} — [TLS] marca conexão cifrada (M6-02); "(conta MSS)", o
+   * servidor que exige conta MSS (M1); ★, o preset padrão.
    */
   private static final class ServerCellRenderer extends DefaultListCellRenderer {
     @Override
@@ -207,12 +220,13 @@ public final class ServerPickerDialog extends JDialog {
       super.getListCellRendererComponent(list, value, index, isSelected, hasFocus);
       if (value instanceof ServerPreset preset) {
         setText(
-            "%s (%s:%d)%s%s"
+            "%s (%s:%d)%s%s%s"
                 .formatted(
                     preset.name(),
                     preset.host(),
                     preset.port(),
                     preset.tls() ? " [TLS]" : "",
+                    preset.usesMssIdentity() ? " (conta MSS)" : "",
                     preset.isDefault() ? "  ★" : ""));
       }
       return this;

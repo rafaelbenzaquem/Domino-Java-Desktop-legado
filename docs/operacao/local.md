@@ -2,7 +2,7 @@
 
 Conteúdo do cliente extraído de `Domino/docs/operacao/local.md` em 08/10/2026 ([ADR-0031 do Domino](../../../Domino/docs/adr/0031-cliente-desktop-em-repositorio-legado.md)). Servidor dedicado, containers, persistência e staging continuam documentados na [operação do Domino](../../../Domino/docs/operacao/local.md).
 
-Comandos a executar na raiz deste repositório, salvo indicação. Builds podem baixar dependências e escrevem no repositório Maven local do usuário; operações que escrevem fora do portfólio exigem registrar impedimento conforme as [regras comuns](../../../AGENTS.md). O cliente grava perfil local, escolha de servidor e tokens de sessão nas `Preferences` do usuário do SO ao ser executado. Operação de produção é exclusiva do responsável autorizado.
+Comandos a executar na raiz deste repositório, salvo indicação. Builds podem baixar dependências e escrevem no repositório Maven local do usuário; operações que escrevem fora do portfólio exigem registrar impedimento conforme as [regras comuns](../../../AGENTS.md). O cliente grava perfil local, escolha de servidor, tokens de sessão e a sessão da conta MSS nas `Preferences` do usuário do SO, e um arquivo de trava por janela em `~/.domino/perfis/` (ou em `-Ddomino.data.dir=`), ao ser executado. Operação de produção é exclusiva do responsável autorizado.
 
 ## Arquitetura
 
@@ -14,6 +14,8 @@ net     — GameTransport + DTOs + GameEvent (domino-net-common, no Domino);
           e PasswordHashing
 app     — MatchController (eventos na EDT) + ClientEventBus + ClientGameView
           + armazenamentos locais (perfil, escolha de servidor, tokens)
+          + conta MSS (M1): IdentityAccountGateway/IdentityClientGateway,
+          MssAccountFlow, DataProfile (perfil local por janela)
 ui      — Swing: MainWindow (conectar → lista → lobby → jogo), BoardView vetorial
 ```
 
@@ -94,6 +96,33 @@ java -Ddomino.tls.devCaFile=C:/caminho/root.crt -jar target/domino-client.jar
 ```
 
 O teste opcional `GrpcStagingTlsTest` só roda com a variável de ambiente `DOMINO_STAGING_CA` definida (staging do Domino no ar); sem ela, aparece como ignorado.
+
+O `servers.json` embutido traz "Local" (padrão) e "Oficial" (`domino.minashonsoftware.com.br:443`, TLS, conta MSS — [M1](../marcos/M01-conta-mss.md)); o oficial só funciona depois da publicação do Domino:M6-06 e não deve ser usado em testes.
+
+## Conta MSS
+
+Servidor com `"identity"` no `servers.json` (ou `--identity=` junto de `--server=`) exige conta MSS ([M1](../marcos/M01-conta-mss.md)). LAN, `--embedded-server` e servidores sem `identity` seguem como antes.
+
+```json
+[
+  {"name": "Local (conta MSS)", "host": "localhost", "port": 1099, "default": true,
+   "identity": "localhost:9100", "identityTls": false}
+]
+```
+
+`identityTls` é `true` por padrão; `false` (texto puro) só é aceito para `localhost`/loopback — fora disso o arquivo é recusado (cai para o embutido, com aviso). Lista pronta para desenvolvimento: [`config/servers-local-identidade.json`](../../config/servers-local-identidade.json) ("Local (conta MSS)" e "Local (sem conta)", ambos `localhost:1099`).
+
+```bash
+java -Ddomino.servers.file=config/servers-local-identidade.json -jar target/domino-client.jar
+java -jar target/domino-client.jar --server=localhost:1099 --identity=localhost:9100 --identity-plaintext
+```
+
+Ambiente local completo (nunca produção): identidade pelo `MSSIdentity/compose.yaml` (gRPC em `localhost:9100`, códigos no Mailpit `http://localhost:8025`) e servidor do Dominó em `remote` pelo `deploy/compose.identidade-local.yml` do Domino (M7). Passo a passo e cenários na [validação do M1](../marcos/M01-conta-mss.md#validação-manual).
+
+- **Barras:** "Servidor: … (conta MSS)" e "Conta MSS: <nick> (<estado>)" com **Conta MSS…** (entrar/criar, estado, nick/avatar, confirmar e-mail, recuperar, sair deste dispositivo/de todos) e **Trocar de conta…**. "Conectar" pede a conta antes de falar com o servidor.
+- **Chamadas:** toda chamada leva `authorization: Bearer` com o acesso de jogo da audiência `domino`; recusa `UNAUTHENTICATED` gera uma única nova tentativa com acesso renovado; durante a partida, um `GetMyStats` por minuto entrega ao servidor o acesso renovado. O `guest_id` enviado é o `account_id`.
+- **Mensagens:** decididas pela origem (identidade × servidor) e pelo caso; tabela no [M1](../marcos/M01-conta-mss.md#como-ficou).
+- **Várias janelas:** cada janela trava um perfil local de dados (`padrao`, `perfil-2`…; `--perfil=<nome>` escolhe e recusa se estiver aberto) com sessão MSS, tokens de assento e perfis de jogador próprios. **Gerenciar contas…** (barra de perfil) lista e remove dados locais e abre nova janela. Tokens e sessões nunca aparecem na tela nem no log.
 
 ### Alternativa: servidor embarcado (ADR-0020 do Domino)
 

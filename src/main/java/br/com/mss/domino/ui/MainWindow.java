@@ -3,6 +3,7 @@ package br.com.mss.domino.ui;
 import br.com.mss.domino.ConnectionResolver;
 import br.com.mss.domino.app.ClientEventBus;
 import br.com.mss.domino.app.ClientGameView;
+import br.com.mss.domino.app.DataProfile;
 import br.com.mss.domino.app.LocalProfileStore;
 import br.com.mss.domino.app.LocalServerChoiceStore;
 import br.com.mss.domino.app.LocalSessionTokenStore;
@@ -18,6 +19,7 @@ import br.com.mss.domino.domain.Hand;
 import br.com.mss.domino.domain.Line;
 import br.com.mss.domino.domain.Seat;
 import br.com.mss.domino.domain.Tile;
+import br.com.mss.domino.net.AccountRefusedException;
 import br.com.mss.domino.net.DtoMapper;
 import br.com.mss.domino.net.GameEvent;
 import br.com.mss.domino.net.GameTransport;
@@ -48,6 +50,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
@@ -73,6 +76,14 @@ import org.slf4j.LoggerFactory;
  * Janela principal do cliente (ligada à camada {@code net}/{@code app}). Um {@link CardLayout} com
  * quatro telas: conectar → lista de partidas → lobby → jogo. Crua — o polimento (splash, layouts,
  * ícones) é da Fase 4.
+ *
+ * <p><b>Conta MSS (M1 deste repositório):</b> num servidor com identidade ({@link
+ * ServerPreset#usesMssIdentity()}), a barra "Conta MSS" mostra a conta desta janela e dá acesso a
+ * entrar/criar, estado, perfil e sair ({@link MssAccountUi}); "Conectar" exige a conta antes de
+ * falar com o servidor; toda chamada leva o acesso de jogo e recusas de conta são explicadas pelo
+ * caso. Cada janela usa um {@link DataProfile perfil local de dados} travado (sessão MSS, tokens de
+ * assento e perfis de jogador próprios). Servidores sem identidade, LAN e {@code --embedded-server}
+ * seguem exatamente como antes.
  */
 public final class MainWindow extends JFrame implements MatchObserver {
 
@@ -87,11 +98,14 @@ public final class MainWindow extends JFrame implements MatchObserver {
   private final JPanel deck = new JPanel(cards);
   private final ClientEventBus bus = new ClientEventBus();
 
-  private final ProfileStore profileStore = new LocalProfileStore();
+  private final DataProfile dataProfile;
+  private final ProfileStore profileStore;
   private final ServerChoiceStore serverChoiceStore = new LocalServerChoiceStore();
-  private final LocalSessionTokenStore sessionTokenStore = new LocalSessionTokenStore();
+  private final LocalSessionTokenStore sessionTokenStore;
+  private final MssAccountUi mss;
   private final ProfileBar profileBar = new ProfileBar();
   private final ServerBar serverBar = new ServerBar();
+  private final AccountBar accountBar = new AccountBar();
   private final StatsBar statsBar = new StatsBar();
 
   private final ConnectCard connectCard = new ConnectCard();
@@ -105,6 +119,8 @@ public final class MainWindow extends JFrame implements MatchObserver {
   private SessionTokenStore tokens;
   private PlayerProfile profile;
   private ServerPreset activeServer;
+  // servidor ao qual o controller está ligado (com --embedded-server, o embarcado, sem conta)
+  private ServerPreset connectedServer;
   private String nick = "jogador";
   private final AutoCloseable embeddedServer;
   private boolean inMatch; // LOBBY ou GAME mostrado agora — trava troca de perfil/servidor (4.5-2)
@@ -133,8 +149,32 @@ public final class MainWindow extends JFrame implements MatchObserver {
    */
   public MainWindow(
       NetworkConfig autoConnect, AutoCloseable embeddedServer, ServerPreset cliServer) {
+    this(
+        autoConnect,
+        embeddedServer,
+        cliServer,
+        DataProfile.acquire(DataProfile.defaultDataDir(), null),
+        List.of());
+  }
+
+  /**
+   * Como {@link #MainWindow(NetworkConfig, AutoCloseable, ServerPreset)}, com o perfil local de
+   * dados já travado para esta janela (M1, {@code --perfil=}) e os argumentos da linha de comando
+   * (repetidos ao abrir uma nova janela em "Gerenciar contas…").
+   */
+  public MainWindow(
+      NetworkConfig autoConnect,
+      AutoCloseable embeddedServer,
+      ServerPreset cliServer,
+      DataProfile dataProfile,
+      List<String> launchArgs) {
     super("Dominó");
     this.embeddedServer = embeddedServer;
+    this.dataProfile = dataProfile;
+    this.profileStore = new LocalProfileStore(dataProfile);
+    this.sessionTokenStore = new LocalSessionTokenStore(dataProfile);
+    Supplier<String> suggestedNick = () -> profile == null ? "" : profile.displayName();
+    this.mss = new MssAccountUi(this, dataProfile, suggestedNick, launchArgs);
     this.activeServer =
         ConnectionResolver.resolveDefault(cliServer, ServerDirectory.load(), serverChoiceStore);
     setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
@@ -151,6 +191,7 @@ public final class MainWindow extends JFrame implements MatchObserver {
     top.setLayout(new BoxLayout(top, BoxLayout.Y_AXIS));
     top.add(profileBar);
     top.add(serverBar);
+    top.add(accountBar);
     top.add(statsBar);
     JPanel root = new JPanel(new BorderLayout());
     root.add(top, BorderLayout.NORTH);
@@ -162,7 +203,9 @@ public final class MainWindow extends JFrame implements MatchObserver {
     ensureProfile();
     showCard(CONNECT);
     if (autoConnect != null) {
-      connectTo(autoConnect, false); // embarcado (ADR-0020): sempre texto puro
+      // embarcado (ADR-0020): sempre texto puro e sem conta
+      connectTo(
+          new ServerPreset("embarcado", autoConnect.host(), autoConnect.port(), false), false);
     }
   }
 
@@ -184,6 +227,16 @@ public final class MainWindow extends JFrame implements MatchObserver {
       sessionTokenStore.useProfile(profile.id());
     }
     profileBar.update(profile, !inMatch);
+    updateTitle();
+  }
+
+  /** "Dominó — perfil", com o perfil local de dados quando não é o padrão (várias janelas, M1). */
+  private void updateTitle() {
+    String title = profile == null ? "Dominó" : "Dominó — " + profile.displayName();
+    setTitle(
+        dataProfile.isDefault()
+            ? title
+            : title + " [perfil local: " + dataProfile.displayName() + "]");
   }
 
   /**
@@ -198,6 +251,8 @@ public final class MainWindow extends JFrame implements MatchObserver {
     if (controller != null) {
       controller.close();
     }
+    mss.close();
+    dataProfile.close();
     if (embeddedServer != null) {
       try {
         embeddedServer.close();
@@ -221,11 +276,47 @@ public final class MainWindow extends JFrame implements MatchObserver {
     inMatch = LOBBY.equals(card) || GAME.equals(card);
     profileBar.update(profile, !inMatch);
     serverBar.update(activeServer, !inMatch);
+    accountBar.update(!inMatch);
   }
 
   private void error(String message) {
     LOG.warn("UI: {}", message);
     JOptionPane.showMessageDialog(this, message, "Ops", JOptionPane.WARNING_MESSAGE);
+  }
+
+  /**
+   * Falha de rede vinda de uma ação do jogador. Recusa de conta MSS (M1) é explicada pelo caso, sem
+   * o prefixo genérico, e fora de partida oferece a ação que resolve (entrar de novo, confirmar o
+   * e-mail); se a conta desta janela mudar, a conexão é refeita na próxima ação. Qualquer outra
+   * falha segue como sempre: {@code prefix + mensagem}.
+   */
+  private void fail(String prefix, TransportException e) {
+    if (e instanceof AccountRefusedException refusal) {
+      LOG.warn("UI: recusa de conta MSS ({}): {}", refusal.reason(), refusal.getMessage());
+      if (mss.explainRefusal(connectedServer, refusal, !inMatch)) {
+        accountChanged();
+      }
+      accountBar.update(!inMatch);
+      return;
+    }
+    error(prefix + e.getMessage());
+  }
+
+  /**
+   * A conta MSS desta janela mudou (entrou, trocou ou saiu): a conexão atual foi aberta com a conta
+   * anterior ({@code guest_id}, tokens de assento) — fecha e volta para "Conectar".
+   */
+  private void accountChanged() {
+    accountBar.update(!inMatch);
+    if (controller != null
+        && connectedServer != null
+        && connectedServer.usesMssIdentity()
+        && !inMatch) {
+      controller.close();
+      controller = null;
+      connectedServer = null;
+      showCard(CONNECT);
+    }
   }
 
   // --- Observer: navegação + repasse para as telas ---
@@ -261,10 +352,10 @@ public final class MainWindow extends JFrame implements MatchObserver {
       // Fase 4.5-4 (ADR-0024): o host já criou a partida da revanche — cada cliente entra nela
       // sozinho, o mesmo caminho de qualquer partida da lista (nenhuma seleção de assento aqui).
       try {
-        controller.join(rematch.newMatchId(), nick);
+        controller.join(rematch.newMatchId(), playerName());
         showCard(LOBBY);
       } catch (TransportException e) {
-        error("falha ao entrar na revanche: " + e.getMessage());
+        fail("falha ao entrar na revanche: ", e);
       }
     }
     if (event != null) {
@@ -280,15 +371,26 @@ public final class MainWindow extends JFrame implements MatchObserver {
     private final JLabel label = new JLabel();
     private final JButton change = new JButton("Trocar perfil…");
 
+    private final JButton manage = new JButton("Gerenciar contas…");
+
     ProfileBar() {
       super(new FlowLayout(FlowLayout.LEFT, 8, 4));
       setBorder(BorderFactory.createEmptyBorder(2, 8, 2, 8));
       add(label);
       add(change);
+      add(manage);
       change.addActionListener(
           e -> {
             new ProfileDialog(MainWindow.this, profileStore).showDialog();
             refreshActiveProfile();
+          });
+      // M1: contas MSS e perfis locais (janelas) deste computador.
+      manage.addActionListener(
+          e -> {
+            if (mss.manageAccounts(activeServer)) {
+              accountChanged();
+            }
+            accountBar.update(!inMatch);
           });
     }
 
@@ -298,8 +400,12 @@ public final class MainWindow extends JFrame implements MatchObserver {
      * incluso.
      */
     void update(PlayerProfile p, boolean canChange) {
-      label.setText("Perfil: " + (p == null ? "?" : p.displayName()));
+      label.setText(
+          "Perfil: "
+              + (p == null ? "?" : p.displayName())
+              + (dataProfile.isDefault() ? "" : " · perfil local: " + dataProfile.displayName()));
       change.setEnabled(canChange);
+      manage.setEnabled(canChange);
     }
   }
 
@@ -326,8 +432,60 @@ public final class MainWindow extends JFrame implements MatchObserver {
      */
     void update(ServerPreset server, boolean canChange) {
       label.setText(
-          "Servidor: " + (server == null ? "?" : server.name() + (server.tls() ? " [TLS]" : "")));
+          "Servidor: "
+              + (server == null
+                  ? "?"
+                  : server.name()
+                      + (server.tls() ? " [TLS]" : "")
+                      + (server.usesMssIdentity() ? " (conta MSS)" : "")));
       change.setEnabled(canChange);
+    }
+  }
+
+  // ================= Barra da conta MSS (M1) =================
+
+  /**
+   * Só aparece com um servidor de identidade selecionado: "Conta MSS: `<nick>` (`<estado>`) [Conta
+   * MSS…] [Trocar de conta…]". O estado é o último conhecido (sem rede); "Conta MSS…" consulta a
+   * identidade.
+   */
+  private final class AccountBar extends JPanel {
+
+    private final JLabel label = new JLabel();
+    private final JButton account = new JButton("Conta MSS…");
+    private final JButton switchAccount = new JButton("Trocar de conta…");
+
+    AccountBar() {
+      super(new FlowLayout(FlowLayout.LEFT, 8, 0));
+      setBorder(BorderFactory.createEmptyBorder(0, 8, 2, 8));
+      add(label);
+      add(account);
+      add(switchAccount);
+      account.addActionListener(
+          e -> {
+            if (mss.openAccount(activeServer)) {
+              accountChanged();
+            }
+            update(!inMatch);
+          });
+      switchAccount.addActionListener(
+          e -> {
+            if (mss.switchAccount(activeServer, true)) {
+              accountChanged();
+            }
+            update(!inMatch);
+          });
+      setVisible(false);
+    }
+
+    void update(boolean canChange) {
+      boolean identity = activeServer != null && activeServer.usesMssIdentity();
+      setVisible(identity);
+      if (identity) {
+        label.setText("Conta MSS: " + mss.label(activeServer));
+      }
+      account.setEnabled(canChange);
+      switchAccount.setEnabled(canChange);
     }
   }
 
@@ -338,6 +496,7 @@ public final class MainWindow extends JFrame implements MatchObserver {
       activeServer = chosen;
       serverChoiceStore.remember(chosen);
       serverBar.update(activeServer, !inMatch);
+      accountBar.update(!inMatch);
     }
   }
 
@@ -369,7 +528,7 @@ public final class MainWindow extends JFrame implements MatchObserver {
     }
     ClientGameView view = controller.view();
     GameMode mode = view == null ? GameMode.FREE_FOR_ALL : view.mode();
-    new StatsDialog(this, controller, guestId(), mode).showDialog();
+    new StatsDialog(this, controller, guestId(connectedServer), mode).showDialog();
   }
 
   // ================= Conectar =================
@@ -402,7 +561,7 @@ public final class MainWindow extends JFrame implements MatchObserver {
       form.add(reconnect, c);
       add(form, BorderLayout.SOUTH);
 
-      connect.addActionListener(e -> connectTo(activeServerConfig(), activeServer.tls()));
+      connect.addActionListener(e -> connectTo(activeServer, true));
       reconnect.addActionListener(
           e -> {
             String token = tokenField.getText().trim();
@@ -410,33 +569,88 @@ public final class MainWindow extends JFrame implements MatchObserver {
               error("cole o token de sessão mostrado na janela do jogo, antes de cair");
               return;
             }
-            reconnectTo(activeServerConfig(), activeServer.tls(), token);
+            reconnectTo(activeServer, token);
           });
     }
   }
 
-  private NetworkConfig activeServerConfig() {
-    return new NetworkConfig(activeServer.host(), activeServer.port());
-  }
-
-  /** {@code PlayerId} do perfil ativo (ADR-0018), auto-declarado em Join como guest_id (M5-4). */
-  private String guestId() {
+  /**
+   * {@code guest_id} declarado em Join e nas estatísticas: o {@code PlayerId} do perfil ativo
+   * (ADR-0018, M5-4) ou, num servidor com identidade, o {@code account_id} da conta MSS (o servidor
+   * deriva da conta de qualquer forma; M1).
+   */
+  private String guestId(ServerPreset server) {
+    if (server != null && server.usesMssIdentity()) {
+      Optional<String> account = mss.accountId(server);
+      if (account.isPresent()) {
+        return account.get();
+      }
+    }
     return profile == null ? null : profile.id().value();
   }
 
-  private void connectTo(NetworkConfig config, boolean tls) {
+  /** Nome na mesa: o nick da conta MSS (servidor com identidade), senão o do perfil local. */
+  private String playerName() {
+    if (connectedServer != null && connectedServer.usesMssIdentity()) {
+      Optional<String> mssNick = mss.nick(connectedServer);
+      if (mssNick.isPresent()) {
+        return mssNick.get();
+      }
+    }
+    return nick;
+  }
+
+  /**
+   * Abre o transporte para {@code server}: com identidade (M1), exige a conta MSS antes ({@code
+   * gate}) e anexa o acesso de jogo a toda chamada; tokens de assento ficam separados por conta.
+   */
+  private MatchController openController(ServerPreset server, boolean gate)
+      throws TransportException {
+    if (controller != null) {
+      controller.close();
+      controller = null;
+    }
+    boolean identity = server.usesMssIdentity();
+    if (identity && gate && !mss.ensureAccount(server)) {
+      accountBar.update(!inMatch);
+      return null;
+    }
+    accountBar.update(!inMatch);
+    GrpcClientTransport transport =
+        new GrpcClientTransport(
+            server.host(), server.port(), guestId(server), server.tls(), mss.credentials(server));
+    tokens =
+        sessionTokenStore.forServer(
+            server.host(), server.port(), identity ? mss.accountId(server).orElse(null) : null);
+    MatchController opened = new MatchController(transport, bus, tokens);
+    controller = opened;
+    connectedServer = server;
+    opened.open();
+    return opened;
+  }
+
+  private void connectTo(ServerPreset server, boolean gate) {
     try {
-      GrpcClientTransport transport =
-          new GrpcClientTransport(config.host(), config.port(), guestId(), tls);
-      tokens = sessionTokenStore.forServer(config.host(), config.port());
-      controller = new MatchController(transport, bus, tokens);
-      controller.open();
+      if (openController(server, gate) == null) {
+        return;
+      }
       listCard.refresh();
       showCard(LIST); // já atualiza profileBar/serverBar (Fase 4.5-2)
+    } catch (AccountRefusedException e) {
+      dropController();
+      fail("não conectou: ", e);
     } catch (TransportException | RuntimeException e) {
-      controller = null;
+      dropController();
       error("não conectou: " + e.getMessage());
     }
+  }
+
+  private void dropController() {
+    if (controller != null) {
+      controller.close();
+    }
+    controller = null;
+    connectedServer = null;
   }
 
   /**
@@ -445,20 +659,22 @@ public final class MainWindow extends JFrame implements MatchObserver {
    * tanto pelo campo avançado/manual da {@code ConnectCard} quanto pela oferta automática de
    * retomada da {@code MatchListCard} (ADR-0019).
    */
-  private void reconnectTo(NetworkConfig config, boolean tls, String token) {
+  private void reconnectTo(ServerPreset server, String token) {
     try {
-      GrpcClientTransport transport =
-          new GrpcClientTransport(config.host(), config.port(), guestId(), tls);
-      tokens = sessionTokenStore.forServer(config.host(), config.port());
-      controller = new MatchController(transport, bus, tokens);
-      controller.open();
+      if (openController(server, true) == null) {
+        return;
+      }
       // Lê o modo do snapshot devolvido aqui (síncrono), não de controller.view() — este só é
       // populado quando o SwingUtilities.invokeLater de MatchController.seedView() roda, o que
       // nunca acontece antes do fim deste método (já estamos na EDT). Lido direto, sempre dava
       // NullPointerException, disfarçada de falha de reconexão pelo catch abaixo (Fase 5-1).
       showResumed(controller.reconnect(token));
+    } catch (AccountRefusedException e) {
+      dropController();
+      showCard(CONNECT); // não deixa o app preso numa tela com controller == null (Fase 5-1)
+      fail("não reconectou: ", e);
     } catch (TransportException | RuntimeException e) {
-      controller = null;
+      dropController();
       error("não reconectou: " + e.getMessage());
       showCard(CONNECT); // não deixa o app preso numa tela com controller == null (Fase 5-1)
     }
@@ -566,7 +782,9 @@ public final class MainWindow extends JFrame implements MatchObserver {
           autoSelectResumable(matches);
         }
       } catch (TransportException e) {
-        error("falha ao listar: " + e.getMessage());
+        liveRefresh.stop(); // não repete o aviso a cada 4s; volta ao reabrir a lista
+        fail("falha ao listar: ", e);
+        liveRefresh.start();
       }
     }
 
@@ -626,7 +844,7 @@ public final class MainWindow extends JFrame implements MatchObserver {
         return;
       }
       Optional<CreateMatchDialog.Result> choice =
-          new CreateMatchDialog(MainWindow.this, "Mesa de " + nick).prompt();
+          new CreateMatchDialog(MainWindow.this, "Mesa de " + playerName()).prompt();
       if (choice.isEmpty()) {
         return;
       }
@@ -635,10 +853,10 @@ public final class MainWindow extends JFrame implements MatchObserver {
         String id =
             controller.createMatch(
                 r.name(), r.mode(), r.size(), r.turnSeconds(), r.timeBankSeconds(), r.password());
-        controller.join(id, nick, r.password()); // a própria senha que acabou de escolher
+        controller.join(id, playerName(), r.password()); // a própria senha que acabou de escolher
         showCard(LOBBY);
       } catch (TransportException e) {
-        error("falha ao criar: " + e.getMessage());
+        fail("falha ao criar: ", e);
       }
     }
 
@@ -673,7 +891,7 @@ public final class MainWindow extends JFrame implements MatchObserver {
               e.getMessage());
           tokens.remove(selected.matchId(), saved.get().seat());
         } catch (TransportException e) {
-          error("não reconectou: " + e.getMessage());
+          fail("não reconectou: ", e);
           return;
         }
       }
@@ -687,10 +905,10 @@ public final class MainWindow extends JFrame implements MatchObserver {
         password = typed.get();
       }
       try {
-        controller.join(selected.matchId(), nick, password);
+        controller.join(selected.matchId(), playerName(), password);
         showCard(LOBBY);
       } catch (TransportException e) {
-        error("falha ao entrar: " + e.getMessage());
+        fail("falha ao entrar: ", e);
       }
     }
 
@@ -738,7 +956,7 @@ public final class MainWindow extends JFrame implements MatchObserver {
             try {
               controller.startMatch();
             } catch (TransportException ex) {
-              error("falha ao iniciar: " + ex.getMessage());
+              fail("falha ao iniciar: ", ex);
             }
           });
     }
@@ -823,7 +1041,7 @@ public final class MainWindow extends JFrame implements MatchObserver {
         try {
           controller.startMatch();
         } catch (TransportException ex) {
-          error("falha ao iniciar: " + ex.getMessage());
+          fail("falha ao iniciar: ", ex);
         }
         return;
       }
@@ -875,7 +1093,7 @@ public final class MainWindow extends JFrame implements MatchObserver {
       try {
         action.run();
       } catch (TransportException ex) {
-        error(ex.getMessage());
+        fail("", ex);
       }
     }
 
@@ -940,7 +1158,7 @@ public final class MainWindow extends JFrame implements MatchObserver {
             try {
               controller.pass();
             } catch (TransportException ex) {
-              error("falha ao passar: " + ex.getMessage());
+              fail("falha ao passar: ", ex);
             }
           });
       boneyardLabel.setFont(boneyardLabel.getFont().deriveFont(Font.ITALIC));
@@ -1043,7 +1261,7 @@ public final class MainWindow extends JFrame implements MatchObserver {
             try {
               controller.chat(text);
             } catch (TransportException ex) {
-              error("falha no chat: " + ex.getMessage());
+              fail("falha no chat: ", ex);
             }
           });
     }
@@ -1104,7 +1322,7 @@ public final class MainWindow extends JFrame implements MatchObserver {
       try {
         action.run();
       } catch (TransportException ex) {
-        error(ex.getMessage());
+        fail("", ex);
       }
     }
 
@@ -1212,7 +1430,7 @@ public final class MainWindow extends JFrame implements MatchObserver {
         selected = null;
         board.setHoverCandidate(null);
       } catch (TransportException ex) {
-        error("jogada recusada: " + ex.getMessage());
+        fail("jogada recusada: ", ex);
       }
     }
 

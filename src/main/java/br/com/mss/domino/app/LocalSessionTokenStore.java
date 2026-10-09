@@ -29,6 +29,10 @@ import java.util.prefs.Preferences;
  * entre servidores e recomeçam a cada subida do servidor embarcado (em memória). Sem o servidor na
  * chave, o token de uma {@code m1} antiga casava com a {@code m1} nova, "Entrar" tentava reconectar
  * com ele e o host recusava — e o token ainda podia ir para um servidor que não o emitiu.
+ *
+ * <p><b>Por conta MSS (M1):</b> num servidor com identidade, {@link #forServer(String, int,
+ * String)} acrescenta a conta ao caminho: trocar de conta no mesmo perfil não oferece "Entrar" com
+ * o assento que pertence a outra conta (o servidor recusaria com "assento pertence a outra conta").
  */
 public final class LocalSessionTokenStore {
 
@@ -40,6 +44,11 @@ public final class LocalSessionTokenStore {
 
   public LocalSessionTokenStore() {
     this(Preferences.userNodeForPackage(LocalSessionTokenStore.class).node("session-tokens"));
+  }
+
+  /** Tokens do perfil local de dados {@code dataProfile} (M1): cada janela aberta tem os seus. */
+  public LocalSessionTokenStore(DataProfile dataProfile) {
+    this(dataProfile.node("session-tokens"));
   }
 
   LocalSessionTokenStore(Preferences root) {
@@ -55,7 +64,18 @@ public final class LocalSessionTokenStore {
    * Os tokens do perfil ativo <b>no momento de cada chamada</b> para o servidor {@code host:port}.
    */
   public SessionTokenStore forServer(String host, int port) {
-    String server = serverNodeName(host, port);
+    return forServer(host, port, null);
+  }
+
+  /**
+   * Como {@link #forServer(String, int)}, separado por conta MSS quando {@code accountId} não é
+   * nulo nem vazio (servidor com identidade, M1).
+   */
+  public SessionTokenStore forServer(String host, int port, String accountId) {
+    String server =
+        accountId == null || accountId.isBlank()
+            ? serverNodeName(host, port)
+            : serverNodeName(host, port) + "/" + safeNodeName("mss-" + accountId);
     return new SessionTokenStore() {
       @Override
       public Optional<String> find(String matchId, int seat) {
@@ -124,7 +144,10 @@ public final class LocalSessionTokenStore {
    * no máximo {@value Preferences#MAX_NAME_LENGTH} caracteres, então um host fora disso vira hash.
    */
   static String serverNodeName(String host, int port) {
-    String plain = host.strip().toLowerCase(Locale.ROOT) + "_" + port;
+    return safeNodeName(host.strip().toLowerCase(Locale.ROOT) + "_" + port);
+  }
+
+  private static String safeNodeName(String plain) {
     if (plain.length() <= Preferences.MAX_NAME_LENGTH && plain.indexOf('/') < 0) {
       return plain;
     }

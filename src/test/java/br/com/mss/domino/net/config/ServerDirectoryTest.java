@@ -127,10 +127,13 @@ class ServerDirectoryTest {
 
   @Test
   void presetDoEmbutidoSemTlsNaoEhOficialNemEndpointOficial() {
-    // o embutido do M6-02 só tem o "Local" em texto puro; o preset oficial entra no M6-06
+    // o "Local" do embutido é texto puro e não oficial; o oficial (M6-06/M1) é outro endereço
     assertFalse(ServerDirectory.isOfficialEndpoint("localhost", 1099, false));
     assertFalse(ServerDirectory.isOfficialEndpoint("localhost", 1099, true));
-    assertFalse(ServerDirectory.loadBundled().presets().stream().anyMatch(ServerPreset::official));
+    assertTrue(
+        ServerDirectory.loadBundled().presets().stream()
+            .filter(ServerPreset::official)
+            .allMatch(p -> p.tls() && !p.host().equals("localhost")));
   }
 
   @Test
