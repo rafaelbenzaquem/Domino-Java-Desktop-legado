@@ -18,8 +18,8 @@ Cliente Swing do Dominó em repositório próprio (Domino:ADR-0031). Este reposi
 
 ## Horizonte
 
-- **Agora:** M0 (PR #1) e M1 (PR #2) integrados e validados localmente pelo responsável em 09/10/2026; falta validar o M1 contra o servidor oficial depois da publicação do Domino:M6-06.
-- **Em seguida:** tornar o "Oficial" o servidor padrão quando o responsável publicar o Domino:M6-06.
+- **Agora:** M0 (PR #1) e M1 (PR #2) integrados e validados pelo responsável em 09/10/2026, o M1 também contra o servidor oficial publicado (Domino:M6-06). "Oficial" como servidor padrão na branch `feature/oficial-padrao`.
+- **Em seguida:** acompanhar o Domino:BUG-014 (partidas encerradas continuam na lista; correção no servidor).
 - **Mais tarde:** decidir aposentadoria ou manutenção mínima do cliente Swing quando o Domino:M8 existir.
 
 ## Pronto para começar (DoR)
