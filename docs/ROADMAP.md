@@ -2,7 +2,7 @@
 id: ROADMAP
 tipo: referencia
 titulo: Roadmap — Domino Java Desktop (legado)
-atualizado_em: 2026-10-08
+atualizado_em: 2026-10-09
 ---
 
 # ROADMAP — Domino Java Desktop (legado)
@@ -18,7 +18,7 @@ Cliente Swing do Dominó em repositório próprio (Domino:ADR-0031). Este reposi
 
 ## Horizonte
 
-- **Agora:** validar M0 (extração) e M1 (conta MSS e preset oficial, branch `feature/m1-conta-mss`, empilhada sobre a do M0) — o M1 depende do servidor do Domino:M7.
+- **Agora:** M0 (PR #1) e M1 (PR #2) integrados e validados localmente pelo responsável em 09/10/2026; falta validar o M1 contra o servidor oficial depois da publicação do Domino:M6-06.
 - **Em seguida:** tornar o "Oficial" o servidor padrão quando o responsável publicar o Domino:M6-06.
 - **Mais tarde:** decidir aposentadoria ou manutenção mínima do cliente Swing quando o Domino:M8 existir.
 
