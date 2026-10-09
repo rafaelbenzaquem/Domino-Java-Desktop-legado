@@ -1,14 +1,20 @@
 target/
-!.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
 .kotlin
 
+### Maven wrapper — versionado (mvnw, mvnw.cmd, .mvn/wrapper/*.properties) ###
+.mvn/wrapper/*.jar
+
+### Maven shade / jqwik (herdados do Domino) ###
+dependency-reduced-pom.xml
+.jqwik-database
+
 ### IntelliJ IDEA ###
-.idea/modules.xml
-.idea/jarRepositories.xml
-.idea/compiler.xml
-.idea/libraries/
+/.idea/
 *.iws
 *.iml
 *.ipr
@@ -28,13 +34,9 @@ target/
 /dist/
 /nbdist/
 /.nb-gradle/
-build/
-!**/src/main/**/build/
-!**/src/test/**/build/
 
 ### VS Code ###
 .vscode/
 
 ### Mac OS ###
 .DS_Store
-/.idea/
