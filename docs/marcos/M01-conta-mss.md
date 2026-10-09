@@ -93,6 +93,26 @@ Testes novos: `GrpcClientTransportAccountTest` (Bearer em toda chamada, sem cabe
 
 **Não executado:** interface gráfica; fluxo contra a identidade local real (o `MSSIdentity/compose.yaml` não estava no ar nesta tarefa); jogo ponta a ponta contra o servidor em `remote`; servidor oficial (nunca nesta tarefa).
 
+### Verificação ponta a ponta pelo orquestrador (08/10/2026)
+
+**Verificado por execução** (orquestrador, Windows 11, JDK 21.0.2, Docker 28.5.1, dados sintéticos `@exemplo.local`): identidade local pelo `MSSIdentity/compose.yaml` (imagem `mss-identity:local`, segredos fictícios); servidor Dominó `feature/m7-conta-mss` @ `47e58fe` pelo `deploy/compose.identidade-local.yml` (jar de 08/10 22:31) em `remote`; cliente `Domino-Java-Desktop-legado` `feature/m1-conta-mss` @ `9823d1b` (`target/domino-client.jar` regenerado), exercitado por um harness Java descartável fora dos repositórios que usa as classes reais do cliente (`IdentityClientGateway`, `IdentityGameCredentials`, `GrpcClientTransport`, `GrpcErrors`). Sem interface gráfica.
+
+| # | Cenário | Resultado no cliente |
+|---|---|---|
+| 1 | Sem conta, listar partidas | `SIGN_IN_REQUIRED`: "Este servidor só aceita jogadores com conta MSS…" |
+| 2 | Conta provisória nova lista, cria partida e entra | aceito |
+| 3 | Mesma conta entra de novo | `ALREADY_SEATED`: "Esta conta MSS já ocupa um lugar nesta partida…" |
+| 4 | Segunda conta entra; usa o token de assento da primeira em `Reconnect` | entra; `SEAT_OF_OTHER_ACCOUNT` |
+| 5 | Estatísticas da conta | aceito |
+| 6 | Confirmar contato (código do Mailpit; revoga acessos) e listar de novo no mesmo transporte | conta `ACTIVE`; lista sem erro (acesso renovado) |
+| 7 | Acesso inventado | `ACCESS_REJECTED`: pede entrar de novo, sem laço |
+| 8 | Conta provisória envelhecida para mais de 1 h no banco local da identidade | `ACCOUNT_RESTRICTED`: "Conta MSS restrita… Confirme o e-mail…" |
+| 9 | Identidade parada com acesso em cache no cliente | até 60 s segue (cache positivo da ADR-0002 do MSSIdentity); depois `IDENTITY_UNAVAILABLE_ON_SERVER`, sem "sessão expirada" |
+| 10 | Servidor com `DOMINO_IDENTITY_SERVICE_SECRET` errado | boot com ERROR orientando a conferir os segredos; conta nova recebe `IDENTITY_UNAVAILABLE_ON_SERVER` |
+| 11 | Servidor em `local` com `DOMINO_OFFICIAL=true` | INFO do modo + 2 WARN; cliente sem conta lista normalmente |
+
+Não verificado aqui: interface gráfica, stream com mais de 10 min (renovação nos streams), revanche, reinício do servidor no meio da partida, imagem Docker, produção.
+
 ## Limitações
 
 - A reabertura automática do stream (e as reconexões automáticas já existentes) não reaplica o snapshot: eventos ocorridos entre a queda e a reabertura podem faltar até o próximo evento/reentrada. Comportamento herdado do retry da ADR-0019.
