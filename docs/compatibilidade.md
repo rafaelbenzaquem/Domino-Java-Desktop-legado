@@ -30,7 +30,7 @@ Registro da dependência deste cliente em relação ao [Domino](../../Domino/REA
 
 Resolvido do Maven local (`./mvnw install` no MSSIdentity) ou do GitHub Packages (repositório `github-mss-identity` no `pom.xml`; token `read:packages` só no `~/.m2/settings.xml`). Verificado em 08/10/2026 com o jar instalado no Maven local em 06/10/2026; gRPC 1.68.1 e protobuf 3.25.5, os mesmos do Domino.
 
-**Contrato de erros do servidor (Domino:M7, `AccountGuard`)** casado em `net.grpc.GrpcErrors` — constatado no código do Domino `feature/m7-conta-mss` @ `201cf6b`:
+**Contrato de erros do servidor (Domino:M7, `AccountGuard`)** casado em `net.grpc.GrpcErrors` — constatado no código do Domino `feature/m7-conta-mss` @ `47e58fe` (`AccountGuard.java`, `GrpcHostTransport.java`). Em `remote`, **todas** as RPCs de `domino.DominoHost` exigem conta, inclusive `ListMatches`, `GetRanking` e `GetMyStats`; o servidor revalida os streams a cada 30 s e só adota acesso renovado da mesma conta recebido num RPC unário:
 
 | Status | Descrição do servidor | Caso no cliente |
 |---|---|---|
@@ -38,7 +38,8 @@ Resolvido do Maven local (`./mvnw install` no MSSIdentity) ou do GitHub Packages
 | `UNAUTHENTICATED` | "acesso de jogo inválido ou expirado; entre novamente na conta MSS" | nova tentativa única; persistindo, `ACCESS_REJECTED` |
 | `PERMISSION_DENIED` | "conta restrita: confirme o contato na conta MSS" | `ACCOUNT_RESTRICTED` |
 | `UNAVAILABLE` | "identidade MSS indisponível" | `IDENTITY_UNAVAILABLE_ON_SERVER` |
-| `PERMISSION_DENIED` | "assento pertence a outra conta" | `SEAT_OF_OTHER_ACCOUNT` |
+| `PERMISSION_DENIED` | "assento pertence a outra conta" (token de assento de outra conta em `Reconnect`, `Leave` e demais RPCs com token) | `SEAT_OF_OTHER_ACCOUNT` |
+| `FAILED_PRECONDITION` | "esta conta já ocupa um lugar nesta partida" | `ALREADY_SEATED` |
 
 O cliente envia `authorization: Bearer <acesso>` em toda chamada e o `account_id` como `guest_id`. Mudança desses textos ou do cabeçalho no Domino exige ajustar `GrpcErrors`/`GrpcErrorsTest` aqui.
 
@@ -57,4 +58,4 @@ O contrato de rede segue o [protobuf do Domino](../../Domino/domino-proto/src/ma
 | Revisão do Domino instalada | Data | Resultado |
 |---|---|---|
 | `acaefff` + remoção do módulo (branch `feature/extracao-cliente-desktop`) | 08/10/2026 | Ver [verificações do M0](marcos/M00-extracao-do-domino.md) (seção "Verificações") |
-| `domino-server 1.0-SNAPSHOT` já instalado no Maven local (não reinstalado no M1; o M7 do servidor estava em desenvolvimento em paralelo) | 08/10/2026 | `verify` do M1 verde (ver [M1](marcos/M01-conta-mss.md), seção "Verificações"); integração com o servidor do M7 não executada |
+| `feature/m7-conta-mss` @ `47e58fe` (Domino:M7), `domino-server 1.0-SNAPSHOT` reinstalado no Maven local em 08/10/2026 22:31 pelo agente do servidor | 08/10/2026 | `verify` do M1 verde (ver [M1](marcos/M01-conta-mss.md), seção "Verificações"); integração ponta a ponta com identidade real não executada |

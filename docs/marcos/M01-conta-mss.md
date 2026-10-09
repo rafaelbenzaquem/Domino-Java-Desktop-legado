@@ -57,9 +57,12 @@ Lado cliente do [Domino:M7](../../../Domino/docs/marcos/M07-conta-mss.md) (servi
 | Servidor `PERMISSION_DENIED` "conta restrita: confirme o contato…" | `ACCOUNT_RESTRICTED` | "Conta MSS restrita…" + "Confirmar o e-mail agora?"; o estado local passa a restrita |
 | Servidor `UNAVAILABLE` "identidade MSS indisponível" | `IDENTITY_UNAVAILABLE_ON_SERVER` | "O serviço de identidade MSS está indisponível para o servidor de jogo agora. Tente novamente mais tarde." (sem falar em sessão/e-mail) |
 | Servidor `PERMISSION_DENIED` "assento pertence a outra conta" | `SEAT_OF_OTHER_ACCOUNT` | "Este assento pertence a outra conta MSS…" |
+| Servidor `FAILED_PRECONDITION` "esta conta já ocupa um lugar nesta partida" | `ALREADY_SEATED` | "Esta conta MSS já ocupa um lugar nesta partida (talvez em outra janela ou outro dispositivo)…" |
 | Local: identidade não renovou a sessão | `LOCAL_SESSION_ENDED` | mensagem da identidade + oferta de entrar de novo |
 | Local: identidade fora do ar (deste computador) | `LOCAL_IDENTITY_UNAVAILABLE` | "Serviço de identidade MSS indisponível: este computador não conseguiu falar com ele…" |
 | Qualquer outro erro | — | mensagem de sempre (servidores sem conta não mudam) |
+
+**Contrato do servidor (Domino:M7 @ `47e58fe`).** Em `remote`, todas as RPCs exigem conta, inclusive `ListMatches`, `GetRanking` e `GetMyStats`: por isso "Conectar" pede a conta **antes** de listar, e a lista, o ranking e as estatísticas tratam as recusas pelo mesmo mapeamento. O servidor revalida os streams a cada 30 s e só adota acesso renovado da mesma conta recebido num RPC unário — é o papel do `GetMyStats` por minuto; a reabertura por `Reconnect` cobre o resto dentro da janela de 5 min.
 
 **Interface.** Barras do topo: "Perfil: … · perfil local: …" com "Trocar perfil…" e "Gerenciar contas…"; "Servidor: Oficial [TLS] (conta MSS)"; barra "Conta MSS: <nick> (<estado>)" com "Conta MSS…" e "Trocar de conta…" (só com servidor com identidade); título com `[perfil local: perfil-2]` fora do padrão. "Conectar" num servidor com identidade abre entrar/criar se não houver conta; conta restrita oferece confirmar antes. Mudança de conta fora de partida fecha a conexão e volta para "Conectar" (o `guest_id` e os tokens eram da conta anterior). O Dominó não tem barra de menus; os acessos ficam nessas barras.
 
@@ -83,7 +86,8 @@ Lado cliente do [Domino:M7](../../../Domino/docs/marcos/M07-conta-mss.md) (servi
 | Verificação | Diretório / revisão | Resultado |
 |---|---|---|
 | `./mvnw -B -ntp verify` | worktree `.claude/worktrees/DominoLegado-m1`, `feature/m1-conta-mss` @ `0c68bdb` (código), contra `domino-server 1.0-SNAPSHOT` já instalado no Maven local e `identity-client-java 1.0-SNAPSHOT` do Maven local | `BUILD SUCCESS`; 236 testes, 0 falhas, 1 ignorado (`GrpcStagingTlsTest`); os 125 anteriores continuam passando (1 teste ajustado: o embutido agora tem um preset oficial); `spotless:check` OK |
-| Textos de erro do servidor | `Domino` worktree `feature/m7-conta-mss` @ `201cf6b`, `AccountGuard.java` (constatado no código) | Mesmos textos casados por `GrpcErrors` |
+| Textos de erro do servidor | `Domino` worktree `feature/m7-conta-mss` @ `47e58fe`, `AccountGuard.java` e `GrpcHostTransport.java` (constatado no código) | Mesmos textos casados por `GrpcErrors`, inclusive "esta conta já ocupa um lugar nesta partida" |
+| `./mvnw -B -ntp verify` depois da reinstalação do servidor do M7 | este worktree, código de `feature/m1-conta-mss` com o ajuste `ALREADY_SEATED`, contra `domino-server 1.0-SNAPSHOT` de `47e58fe` (jar de 08/10/2026 22:31) | `BUILD SUCCESS`; 237 testes, 0 falhas, 1 ignorado; `spotless:check` OK |
 
 Testes novos: `GrpcClientTransportAccountTest` (Bearer em toda chamada, sem cabeçalho sem conta, nova tentativa única, sem laço, recusas por caso, falha local não sai do cliente, keepalive, reabertura do stream, sem conta em texto puro remoto), `GrpcErrorsTest`, `IdentityPresetTest`, `IdentityLaunchTest`, `DataProfileTest`, `LocalAccountsServiceTest`, `LocalStoresIdentityTest`, e portados do legado do TchowStrick: `MssAccountFlowTest`, `IdentityClientGatewayTest` (identidade falsa em processo), `IdentityGameCredentialsTest`, `AccountStateDerivationTest`, `LocalIdentitySessionStoreTest`.
 
