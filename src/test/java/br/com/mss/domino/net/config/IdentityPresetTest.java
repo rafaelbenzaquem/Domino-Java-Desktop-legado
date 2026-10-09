@@ -48,8 +48,14 @@ class IdentityPresetTest {
   }
 
   @Test
-  void localContinuaPadraoSemContaNoEmbutido() {
-    ServerPreset local = ServerDirectory.loadBundled().defaultPreset().orElseThrow();
+  void oficialEhOPadraoEOLocalContinuaSemContaNoEmbutido() {
+    // Domino:M6-06 publicado em 09/10/2026: o "Oficial" passa a ser o padrão do embutido
+    assertEquals("Oficial", ServerDirectory.loadBundled().defaultPreset().orElseThrow().name());
+    ServerPreset local =
+        ServerDirectory.loadBundled().presets().stream()
+            .filter(p -> p.name().equals("Local"))
+            .findFirst()
+            .orElseThrow();
 
     assertEquals("Local", local.name());
     assertFalse(local.usesMssIdentity());

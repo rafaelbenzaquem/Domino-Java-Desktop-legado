@@ -23,13 +23,14 @@ class ServerDirectoryTest {
   }
 
   @Test
-  void semArquivoExternoUsaOEmbutidoComOLocal() {
+  void semArquivoExternoUsaOEmbutidoComOOficial() {
     System.setProperty(
         ServerDirectory.EXTERNAL_FILE_PROPERTY, tempDir.resolve("nao-existe.json").toString());
 
     ServerPreset preset = ServerDirectory.load().defaultPreset().orElseThrow();
 
-    assertEquals(new ServerPreset("Local", "localhost", 1099, true), preset);
+    assertEquals("Oficial", preset.name());
+    assertTrue(preset.official());
   }
 
   @Test
@@ -60,7 +61,7 @@ class ServerDirectoryTest {
 
     ServerPreset preset = ServerDirectory.load().defaultPreset().orElseThrow();
 
-    assertEquals("Local", preset.name());
+    assertEquals("Oficial", preset.name());
   }
 
   @Test
@@ -140,7 +141,9 @@ class ServerDirectoryTest {
   void oRecursoEmbutidoEmSiEstaPresenteEValido() {
     ServerDirectory bundled = ServerDirectory.loadBundled();
 
+    assertEquals("Oficial", bundled.defaultPreset().orElseThrow().name());
     assertEquals(
-        new ServerPreset("Local", "localhost", 1099, true), bundled.defaultPreset().orElseThrow());
+        new ServerPreset("Local", "localhost", 1099, false),
+        bundled.presets().stream().filter(p -> p.name().equals("Local")).findFirst().orElseThrow());
   }
 }

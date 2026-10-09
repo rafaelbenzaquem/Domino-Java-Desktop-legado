@@ -58,7 +58,7 @@ run.cmd                               # Windows — ou: java -jar target\domino-
 
 Para jogar em rede local com o servidor dedicado, suba-o primeiro no Domino ([operação do Domino](../../../Domino/docs/operacao/local.md), `docker compose up -d --build` ou `run-server.cmd`) e abra dois ou mais clientes.
 
-Em cada cliente: a barra **"Servidor: `<nome>`"** no topo já mostra pra onde vai conectar (padrão: preset "Local" do `servers.json` embutido, isto é, `localhost:1099`) — **Trocar servidor…** abre a lista de presets + busca em LAN + endereço personalizado (ADR-0022 do Domino), sem digitar host/porta no caminho comum. **Conectar** → **Criar partida** (modo "um contra todos", 2–4 jogadores, Aberta ou Fechada com senha — ADR-0014) ou **Entrar** por uma da lista (que se atualiza sozinha a cada ~4s; partidas 🔒 pedem a senha antes) → no lobby, a partida começa quando enche ou o criador clica **Começar**. Compra do dorme e passe são automáticos; jogada fora da vez é recusada pelo servidor. Fechar a janela do cliente encerra o processo (não fica nada rodando em segundo plano).
+Em cada cliente: a barra **"Servidor: `<nome>`"** no topo já mostra pra onde vai conectar (padrão: preset "Oficial" do `servers.json` embutido, `domino.minashonsoftware.com.br:443`, desde 09/10/2026; para jogar em LAN, escolha "Local" — `localhost:1099` — uma vez e a escolha fica salva) — **Trocar servidor…** abre a lista de presets + busca em LAN + endereço personalizado (ADR-0022 do Domino), sem digitar host/porta no caminho comum. **Conectar** → **Criar partida** (modo "um contra todos", 2–4 jogadores, Aberta ou Fechada com senha — ADR-0014) ou **Entrar** por uma da lista (que se atualiza sozinha a cada ~4s; partidas 🔒 pedem a senha antes) → no lobby, a partida começa quando enche ou o criador clica **Começar**. Compra do dorme e passe são automáticos; jogada fora da vez é recusada pelo servidor. Fechar a janela do cliente encerra o processo (não fica nada rodando em segundo plano).
 
 A senha de uma partida nunca trafega em claro — só um hash SHA-256, tanto ao criar quanto ao entrar; o servidor nunca vê a senha em si, só compara hashes.
 
@@ -97,7 +97,7 @@ java -Ddomino.tls.devCaFile=C:/caminho/root.crt -jar target/domino-client.jar
 
 O teste opcional `GrpcStagingTlsTest` só roda com a variável de ambiente `DOMINO_STAGING_CA` definida (staging do Domino no ar); sem ela, aparece como ignorado.
 
-O `servers.json` embutido traz "Local" (padrão) e "Oficial" (`domino.minashonsoftware.com.br:443`, TLS, conta MSS — [M1](../marcos/M01-conta-mss.md)); o oficial só funciona depois da publicação do Domino:M6-06 e não deve ser usado em testes.
+O `servers.json` embutido traz "Oficial" (padrão; `domino.minashonsoftware.com.br:443`, TLS, conta MSS — [M1](../marcos/M01-conta-mss.md); publicado em 09/10/2026, Domino:M6-06) e "Local". Testes automatizados e validações de desenvolvimento não usam o oficial: use `--server=`, `-Ddomino.servers.file=` ou "Local".
 
 ## Conta MSS
 

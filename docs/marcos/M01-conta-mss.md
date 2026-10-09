@@ -2,7 +2,7 @@
 id: M1
 tipo: marco
 titulo: Conta MSS e servidor oficial no desktop
-status: integrado
+status: validado
 prioridade: P1
 esforco: G
 depende_de: [M0, Domino:M7, Domino:M6-06]
@@ -10,7 +10,7 @@ relacionados: [Domino:ADR-0032, Domino:ADR-0030, Domino:ADR-0031, TchowStrick-Ja
 evidencia: verificado
 branch: feature/m1-conta-mss
 integracao: "integrado (PR #2, 2bc5279)"
-validacao: "local aprovada pelo responsável em 09/10/2026 (informado); servidor oficial pendente da publicação"
+validacao: "local e contra o servidor oficial aprovadas pelo responsável em 09/10/2026 (informado)"
 atualizado_em: 2026-10-09
 ---
 
@@ -31,12 +31,12 @@ Lado cliente do [Domino:M7](../../../Domino/docs/marcos/M07-conta-mss.md) (servi
 
 | ID | Item | Status | Integração | Validação |
 |---|---|---|---|---|
-| M1-01 | `identity` por servidor (`servers.json`, escolha salva, `--identity=`/`--identity-plaintext`), texto puro só em loopback | em-validacao | branch | pendente |
-| M1-02 | Preset oficial embutido (Domino:M6-06) e atualização da escolha salva antiga do oficial | em-validacao | branch | pendente |
-| M1-03 | Conta MSS: entrar/criar (nick + e-mail → código), confirmar, recuperar, estado, nick/avatar, sair deste dispositivo/de todos, trocar de conta | em-validacao | branch | pendente |
-| M1-04 | Acesso de jogo da audiência `domino` em `authorization: Bearer` de toda chamada; nova tentativa única; keepalive e reabertura do stream | em-validacao | branch | pendente |
-| M1-05 | Mensagens de recusa por origem e caso (contrato de erros do Domino:M7) | em-validacao | branch | pendente |
-| M1-06 | Perfil local de dados por janela (`--perfil=`, trava por arquivo) e "Gerenciar contas…" | em-validacao | branch | pendente |
+| M1-01 | `identity` por servidor (`servers.json`, escolha salva, `--identity=`/`--identity-plaintext`), texto puro só em loopback | validado | integrado (PR #2) | aprovada (local e oficial, 09/10/2026; informado) |
+| M1-02 | Preset oficial embutido (Domino:M6-06) e atualização da escolha salva antiga do oficial | validado | integrado (PR #2) | aprovada (local e oficial, 09/10/2026; informado) |
+| M1-03 | Conta MSS: entrar/criar (nick + e-mail → código), confirmar, recuperar, estado, nick/avatar, sair deste dispositivo/de todos, trocar de conta | validado | integrado (PR #2) | aprovada (local e oficial, 09/10/2026; informado) |
+| M1-04 | Acesso de jogo da audiência `domino` em `authorization: Bearer` de toda chamada; nova tentativa única; keepalive e reabertura do stream | validado | integrado (PR #2) | aprovada (local e oficial, 09/10/2026; informado) |
+| M1-05 | Mensagens de recusa por origem e caso (contrato de erros do Domino:M7) | validado | integrado (PR #2) | aprovada (local e oficial, 09/10/2026; informado) |
+| M1-06 | Perfil local de dados por janela (`--perfil=`, trava por arquivo) e "Gerenciar contas…" | validado | integrado (PR #2) | aprovada (local e oficial, 09/10/2026; informado) |
 
 ## Como ficou
 
@@ -68,7 +68,7 @@ Lado cliente do [Domino:M7](../../../Domino/docs/marcos/M07-conta-mss.md) (servi
 
 ## Decisões (do agente, rotineiras; registradas aqui)
 
-1. **"Local" continua padrão; "Oficial" entra na lista sem ser padrão.** O servidor oficial ainda não está publicado (Domino:M6-06) e as regras locais proíbem apontar o cliente para produção sem autorização operacional. Tornar o Oficial padrão (como no TchowStrick) fica para o responsável no momento da publicação — mudança de uma linha no `servers-default.json`.
+1. **"Local" continua padrão; "Oficial" entra na lista sem ser padrão** (substituída em 09/10/2026: com o Domino:M6-06 publicado, o "Oficial" passou a ser o padrão na branch `feature/oficial-padrao`). O servidor oficial ainda não está publicado (Domino:M6-06) e as regras locais proíbem apontar o cliente para produção sem autorização operacional. Tornar o Oficial padrão (como no TchowStrick) fica para o responsável no momento da publicação — mudança de uma linha no `servers-default.json`.
 2. Sem "conta oficial antiga" (`tchowstrick.auth.v1`): o Dominó nunca teve.
 3. Nome na mesa num servidor com identidade: nick lembrado da conta MSS; sem ele, o do perfil de jogador.
 4. Repositório `github-mss-identity` (GitHub Packages) declarado no `pom.xml`, conforme o README do `identity-client-java`; credencial só no `~/.m2/settings.xml`. Sem ela, o build usa o Maven local.
@@ -144,4 +144,4 @@ Ambiente local, nunca o oficial. Pré-requisitos: Docker; JDK 21.
 | 14 | `java -jar target/domino-client.jar --embedded-server --perfil=lan` e outra janela `--server=localhost:1099 --perfil=lan2` | Comportamento de antes; nenhuma barra "Conta MSS"; partida pela LAN (com o servidor do passo 2 parado, porque usa a mesma porta) |
 | 15 | Escolha salva antiga do oficial sem identidade | Ao abrir, "Servidor: Oficial [TLS] (conta MSS)" (sem conectar ao oficial) |
 
-Resultado: aprovado pelo responsável em 09/10/2026, em ambiente local (informado na sessão, documentado). Contra o servidor oficial: pendente da publicação (Domino:M6-06).
+Resultado: aprovado pelo responsável em 09/10/2026, em ambiente local (informado na sessão, documentado). Contra o servidor oficial (`domino.minashonsoftware.com.br:443`, publicado em 09/10/2026): aprovado pelo responsável em 09/10/2026 (informado na sessão, documentado) — sem conta recebe "conta MSS necessária neste servidor"; duas contas em computadores diferentes jogam partida completa com revanche; retomada do assento; partida de mais de 10 min; estatísticas após recriar o servidor (cenários do §9 do `Domino/docs/operacao/m7-producao.md`). Achado: partidas encerradas continuam na lista (Domino:BUG-014, servidor).

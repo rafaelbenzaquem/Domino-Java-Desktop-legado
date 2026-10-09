@@ -1,17 +1,17 @@
 [
   {
-    "name": "Local",
-    "host": "localhost",
-    "port": 1099,
-    "default": true
-  },
-  {
     "name": "Oficial",
     "host": "domino.minashonsoftware.com.br",
     "port": 443,
+    "default": true,
     "tls": true,
     "official": true,
     "identity": "identity.minashonsoftware.com.br:443",
     "identityTls": true
+  },
+  {
+    "name": "Local",
+    "host": "localhost",
+    "port": 1099
   }
 ]
