@@ -2,16 +2,16 @@
 id: M0
 tipo: marco
 titulo: Extração do cliente desktop do Domino
-status: em-validacao
+status: validado
 prioridade: P2
 esforco: P
 depende_de: []
 relacionados: [Domino:ADR-0031, Domino:ADR-0026, Domino:ADR-0020, TchowStrick:ADR-0020]
 evidencia: verificado
 branch: feature/m0-extracao-do-domino
-integracao: branch
-validacao: pendente
-atualizado_em: 2026-10-08
+integracao: "integrado (PR #1, 7af0086); no Domino, PR #60"
+validacao: "aprovada pelo responsável em 09/10/2026 (informado)"
+atualizado_em: 2026-10-09
 ---
 
 # M0 — Extração do cliente desktop do Domino
@@ -83,4 +83,4 @@ cd Domino-Java-Desktop-legado && ./mvnw clean verify
 | 5 | No Domino: `./mvnw -B -ntp verify` | Reactor com quatro módulos (`domino-domain`, `domino-proto`, `domino-net-common`, `domino-server`) passa; não há `domino-client-desktop` |
 | 6 | Opcional, no Domino: `docker build -t domino-server .` | Imagem do servidor builda sem o cliente |
 
-Resultado: pendente de execução pelo responsável. Os cenários 1, 5 e 6 já foram cobertos por execução do agente (acima); os cenários 2 a 4 exigem interface.
+Resultado: aprovado pelo responsável em 09/10/2026 (informado na sessão, documentado). Registro anterior: Os cenários 1, 5 e 6 já foram cobertos por execução do agente (acima); os cenários 2 a 4 exigem interface.

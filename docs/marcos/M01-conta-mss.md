@@ -2,16 +2,16 @@
 id: M1
 tipo: marco
 titulo: Conta MSS e servidor oficial no desktop
-status: em-validacao
+status: integrado
 prioridade: P1
 esforco: G
 depende_de: [M0, Domino:M7, Domino:M6-06]
 relacionados: [Domino:ADR-0032, Domino:ADR-0030, Domino:ADR-0031, TchowStrick-Java-Desktop-Legado:M1, TchowStrick-Java-Desktop-Legado:BUG-002, TchowStrick-Java-Desktop-Legado:BUG-003, TchowStrick-Java-Desktop-Legado:BUG-004, TchowStrick-Java-Desktop-Legado:BUG-005, TchowStrick:BUG-020]
 evidencia: verificado
 branch: feature/m1-conta-mss
-integracao: branch
-validacao: pendente
-atualizado_em: 2026-10-08
+integracao: "integrado (PR #2, 2bc5279)"
+validacao: "local aprovada pelo responsável em 09/10/2026 (informado); servidor oficial pendente da publicação"
+atualizado_em: 2026-10-09
 ---
 
 # M1 — Conta MSS e servidor oficial no desktop
@@ -144,4 +144,4 @@ Ambiente local, nunca o oficial. Pré-requisitos: Docker; JDK 21.
 | 14 | `java -jar target/domino-client.jar --embedded-server --perfil=lan` e outra janela `--server=localhost:1099 --perfil=lan2` | Comportamento de antes; nenhuma barra "Conta MSS"; partida pela LAN (com o servidor do passo 2 parado, porque usa a mesma porta) |
 | 15 | Escolha salva antiga do oficial sem identidade | Ao abrir, "Servidor: Oficial [TLS] (conta MSS)" (sem conectar ao oficial) |
 
-Resultado: pendente (responsável).
+Resultado: aprovado pelo responsável em 09/10/2026, em ambiente local (informado na sessão, documentado). Contra o servidor oficial: pendente da publicação (Domino:M6-06).
