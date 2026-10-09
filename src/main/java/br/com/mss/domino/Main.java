@@ -1,10 +1,16 @@
 package br.com.mss.domino;
 
+import br.com.mss.domino.app.DataProfile;
+import br.com.mss.domino.app.DataProfileException;
 import br.com.mss.domino.net.NetworkConfig;
+import br.com.mss.domino.net.config.IdentityTarget;
 import br.com.mss.domino.net.config.ServerPreset;
 import br.com.mss.domino.net.grpc.GrpcHostTransport;
 import br.com.mss.domino.ui.MainWindow;
+import java.awt.GraphicsEnvironment;
 import java.io.IOException;
+import java.util.List;
+import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import org.slf4j.Logger;
@@ -20,7 +26,16 @@ import org.slf4j.LoggerFactory;
  * java -jar target/domino.jar --embedded-server --port=1100 (outra porta)
  * java -jar target/domino.jar --embedded-server --no-lan-discovery (sem broadcast UDP, ADR-0021)
  * java -jar target/domino.jar --server=192.168.0.5:1099     (pré-seleciona outro servidor, ADR-0022)
+ * java -jar target/domino.jar --server=localhost:1099 --identity=localhost:9100 --identity-plaintext
+ *                                                           (servidor com conta MSS, M1)
+ * java -jar target/domino.jar --perfil=teste                (perfil local de dados desta janela, M1)
  * </pre>
+ *
+ * <p>{@code --identity=host:porta} (M1) só vale junto de {@code --server=} e usa TLS; {@code
+ * --identity-plaintext} usa texto puro, aceito só para localhost/loopback. {@code --perfil=nome}
+ * abre o perfil local {@code nome} (sessão MSS, tokens de assento e perfis de jogador próprios);
+ * sem ele, a 1ª janela usa o perfil padrão e as seguintes o próximo livre ({@link DataProfile}).
+ * Uso inválido dessas opções ou perfil já aberto em outra janela encerram com mensagem clara.
  */
 public final class Main {
 
@@ -30,6 +45,9 @@ public final class Main {
   static final String FLAG_NO_LAN_DISCOVERY = "--no-lan-discovery";
   private static final String OPTION_PORT = "--port";
   private static final String OPTION_SERVER = "--server";
+  static final String OPTION_IDENTITY = "--identity";
+  static final String FLAG_IDENTITY_PLAINTEXT = "--identity-plaintext";
+  static final String OPTION_PERFIL = "--perfil";
 
   private Main() {}
 
@@ -39,7 +57,24 @@ public final class Main {
     boolean lanDiscovery = !hasFlag(args, FLAG_NO_LAN_DISCOVERY);
     int port = intOption(args, OPTION_PORT, NetworkConfig.DEFAULT_PORT);
     NetworkConfig config = new NetworkConfig("localhost", port);
-    ServerPreset cliServer = parseServerOption(stringOption(args, OPTION_SERVER));
+    ServerPreset cliServer;
+    DataProfile dataProfile;
+    try {
+      cliServer =
+          withIdentityOption(
+              parseServerOption(stringOption(args, OPTION_SERVER)),
+              stringOption(args, OPTION_IDENTITY),
+              hasFlag(args, FLAG_IDENTITY_PLAINTEXT));
+      String perfil = stringOption(args, OPTION_PERFIL);
+      dataProfile =
+          DataProfile.acquire(
+              DataProfile.defaultDataDir(), perfil == null ? null : DataProfile.normalize(perfil));
+    } catch (IllegalArgumentException | DataProfileException e) {
+      exitWithMessage(e.getMessage());
+      return;
+    }
+    LOG.info("perfil local de dados: {}", dataProfile.displayName());
+    List<String> launchArgs = List.of(args);
 
     GrpcHostTransport embeddedHost =
         embeddedServer ? startEmbeddedServer(config, lanDiscovery) : null;
@@ -52,8 +87,59 @@ public final class Main {
           } catch (Exception ignored) {
             // fica com o Look & Feel padrão
           }
-          new MainWindow(autoConnect, embeddedHost, cliServer).setVisible(true);
+          new MainWindow(autoConnect, embeddedHost, cliServer, dataProfile, launchArgs)
+              .setVisible(true);
         });
+  }
+
+  /** Erro de linha de comando ou perfil em uso: avisa (console e, se houver tela, janela) e sai. */
+  private static void exitWithMessage(String message) {
+    LOG.error(message);
+    System.err.println(message);
+    if (!GraphicsEnvironment.isHeadless()) {
+      JOptionPane.showMessageDialog(null, message, "Dominó", JOptionPane.ERROR_MESSAGE);
+    }
+    System.exit(1);
+  }
+
+  /**
+   * Acrescenta a identidade MSS de {@code --identity=} ao servidor de {@code --server=} (M1).
+   *
+   * @throws IllegalArgumentException {@code --identity=} sem {@code --server=}, destino inválido,
+   *     ou texto puro fora de localhost.
+   */
+  static ServerPreset withIdentityOption(
+      ServerPreset cliServer, String identitySpec, boolean plaintext) {
+    if (identitySpec == null) {
+      if (plaintext) {
+        throw new IllegalArgumentException(
+            FLAG_IDENTITY_PLAINTEXT + " exige " + OPTION_IDENTITY + "=host:porta.");
+      }
+      return cliServer;
+    }
+    if (cliServer == null) {
+      throw new IllegalArgumentException(
+          OPTION_IDENTITY
+              + "= exige "
+              + OPTION_SERVER
+              + "=host:porta (a identidade vale para o servidor indicado na linha de comando).");
+    }
+    IdentityTarget identity = IdentityTarget.parse(identitySpec, !plaintext);
+    if (!identity.plaintextAllowed()) {
+      throw new IllegalArgumentException(
+          FLAG_IDENTITY_PLAINTEXT
+              + " só é aceito para localhost; use TLS para \""
+              + identity.authority()
+              + "\".");
+    }
+    return new ServerPreset(
+        "linha de comando",
+        cliServer.host(),
+        cliServer.port(),
+        cliServer.isDefault(),
+        cliServer.tls(),
+        false,
+        identity);
   }
 
   /**
@@ -86,8 +172,11 @@ public final class Main {
     for (String arg : args) {
       if (!arg.equals(FLAG_EMBEDDED_SERVER)
           && !arg.equals(FLAG_NO_LAN_DISCOVERY)
+          && !arg.equals(FLAG_IDENTITY_PLAINTEXT)
           && !arg.startsWith(OPTION_PORT + "=")
-          && !arg.startsWith(OPTION_SERVER + "=")) {
+          && !arg.startsWith(OPTION_SERVER + "=")
+          && !arg.startsWith(OPTION_IDENTITY + "=")
+          && !arg.startsWith(OPTION_PERFIL + "=")) {
         LOG.warn("argumento desconhecido, ignorado: {}", arg);
       }
     }
