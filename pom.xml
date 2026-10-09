@@ -35,6 +35,8 @@
 
         <!-- Artefatos do Domino (domain/proto/net-common/server). -->
         <domino.version>1.0-SNAPSHOT</domino.version>
+        <!-- Cliente da identidade MSS (MSSIdentity M3-01): conta MSS no desktop (M1). -->
+        <identity.client.version>1.0-SNAPSHOT</identity.client.version>
 
         <!-- versões fixadas (copiadas do pom agregador do Domino @ acaefff) -->
         <junit.version>5.11.4</junit.version>
@@ -66,6 +68,15 @@
             <groupId>br.com.mss.domino</groupId>
             <artifactId>domino-server</artifactId>
             <version>${domino.version}</version>
+        </dependency>
+
+        <!-- Conta MSS (M1): entrar/criar conta e acesso de jogo da audiência "domino". Instalado
+             no Maven local a partir do MSSIdentity (./mvnw install) ou baixado do GitHub Packages
+             (repositório github-mss-identity abaixo; exige token read:packages no settings.xml). -->
+        <dependency>
+            <groupId>br.com.mss.identity</groupId>
+            <artifactId>identity-client-java</artifactId>
+            <version>${identity.client.version}</version>
         </dependency>
 
         <dependency>
@@ -119,6 +130,17 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+
+    <!-- Publicação do identity-client-java (MSSIdentity D2). Credencial só no ~/.m2/settings.xml
+         (server id github-mss-identity), nunca aqui; sem ela, o build usa o Maven local. -->
+    <repositories>
+        <repository>
+            <id>github-mss-identity</id>
+            <url>https://maven.pkg.github.com/rafaelbenzaquem/mss-identity</url>
+            <releases><enabled>true</enabled></releases>
+            <snapshots><enabled>true</enabled></snapshots>
+        </repository>
+    </repositories>
 
     <build>
         <finalName>domino-client</finalName>
