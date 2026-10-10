@@ -6,6 +6,12 @@ Versões anteriores do cliente desktop foram publicadas junto do servidor, no [C
 
 ## [Não publicado]
 
+### Corrigido
+- `mvnw`/`mvnw.cmd` recuperam o bit de execução perdido na extração do Domino (BUG-001).
+
+### Documentação
+- README e [operação local](docs/operacao/local.md): JDK 21 (LTS) como requisito explícito de build — JDKs mais novos (24+, testado com a 27) quebram o `spotless:check` com `NoSuchMethodError`; comando de instalação do Domino (passo "Executar em outro computador" e "Build") passa a incluir `-Djacoco.skip=true` junto com `-DskipTests`, necessário porque o `jacoco:check` do `domino-server` (cobertura mínima) está na fase `verify`, que o `install` também roda.
+
 ### Alterado
 - "Oficial" (`domino.minashonsoftware.com.br:443`, TLS, conta MSS) passa a ser o servidor padrão do `servers.json` embutido e o primeiro da lista; "Local" (`localhost:1099`) continua em **Trocar servidor…**. A escolha salva no computador continua tendo prioridade (Domino:M6-06, publicado em 09/10/2026).
 

@@ -23,7 +23,7 @@ Regra de dependência: `app` importa `net`+`domain`; `ui` importa `app` e nunca 
 
 ## Requisitos
 
-- JDK 21+ (o código compila com `release 21`).
+- **JDK 21** (LTS) para buildar — o código compila com `release 21`. JDKs mais novos (24+, testado com a 27) fazem o `spotless:check` (Spotless/`google-java-format`) falhar com `NoSuchMethodError` em API interna do `javac`, tanto aqui quanto no Domino; instale uma JDK 21 à parte se o padrão do sistema for outro (ex.: `brew install openjdk@21` no macOS, que não substitui a JDK já linkada) e aponte `JAVA_HOME` só para o build. Rodar o jar já empacotado numa JRE mais nova funciona normalmente.
 - Checkout do [Domino](../../../mss-domino-server/README.md) ao lado deste repositório, na versão indicada em [compatibilidade](../compatibilidade.md).
 - Não precisa ter Maven instalado — use o wrapper `./mvnw` (Linux/macOS/Git Bash) ou `mvnw.cmd` (Windows). O primeiro build baixa o Maven e os plugins.
 - Docker **não** é necessário aqui: os testes deste repositório sobem o servidor em memória, no próprio processo. Docker continua necessário para o `verify` completo do Domino (Testcontainers); por isso o passo 1 abaixo pula os testes.
@@ -34,8 +34,10 @@ Regra de dependência: `app` importa `net`+`domain`; `ui` importa `app` e nunca 
 
    ```bash
    cd ../mss-domino-server
-   ./mvnw -B -ntp -DskipTests install
+   ./mvnw -B -ntp -DskipTests -Djacoco.skip=true install
    ```
+
+   `-Djacoco.skip=true` é obrigatório junto com `-DskipTests`: o `jacoco:check` do `domino-server` (cobertura mínima de 70%) está amarrado à fase `verify`, que o `install` também roda; sem os testes, a cobertura medida fica perto de zero e o build falha nessa checagem (não é um erro no código).
 
 2. Neste repositório:
 
