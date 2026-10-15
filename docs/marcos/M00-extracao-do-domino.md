@@ -22,12 +22,12 @@ O jogador continua usando o mesmo cliente desktop Swing do Dominó, agora builda
 
 ## Escopo
 
-- Incluído: código, testes e recursos de `Domino/domino-client-desktop/` (`main` @ `acaefff`), inclusive `src/test/resources/tls/` (Domino:M6-02), copiados sem alteração; `run.cmd`, wrapper Maven, `.gitattributes` e `.editorconfig` da raiz do Domino; `pom.xml` autônomo (sem parent), com as versões e configurações de plugins do agregador do Domino e a versão dos artefatos do Domino na propriedade `domino.version`; substituição do template inicial do IntelliJ (`pom.xml` com `groupId` incorreto e `src/main/java/br/com/mss/identity/Main.java` removidos); documentação mínima no padrão MSS e a operação do cliente movida do Domino; no Domino, remoção do módulo, ajuste de `pom.xml`, `Dockerfile`, `docker-compose.yml` e documentação (branch `feature/extracao-cliente-desktop` de lá).
+- Incluído: código, testes e recursos de `mss-domino-server/domino-client-desktop/` (`main` @ `acaefff`), inclusive `src/test/resources/tls/` (Domino:M6-02), copiados sem alteração; `run.cmd`, wrapper Maven, `.gitattributes` e `.editorconfig` da raiz do Domino; `pom.xml` autônomo (sem parent), com as versões e configurações de plugins do agregador do Domino e a versão dos artefatos do Domino na propriedade `domino.version`; substituição do template inicial do IntelliJ (`pom.xml` com `groupId` incorreto e `src/main/java/br/com/mss/identity/Main.java` removidos); documentação mínima no padrão MSS e a operação do cliente movida do Domino; no Domino, remoção do módulo, ajuste de `pom.xml`, `Dockerfile`, `docker-compose.yml` e documentação (branch `feature/extracao-cliente-desktop` de lá).
 - Fora de escopo: qualquer mudança de comportamento do cliente, do servidor ou do contrato; conta MSS e servidor oficial ([M1](../ROADMAP.md#m1--conta-mss-e-servidor-oficial-no-desktop)); CI própria; publicação de versão.
 
 ## Arquitetura e impacto
 
-Decisão e alternativas na [ADR-0031 do Domino](../../../Domino/docs/adr/0031-cliente-desktop-em-repositorio-legado.md), no molde da [TchowStrick:ADR-0020](../../../TchowStrick/docs/adr/0020-cliente-desktop-em-repositorio-legado.md). Dependências, APIs consumidas e versão em [compatibilidade](../compatibilidade.md). Sem mudança de contrato, dados ou operação de produção.
+Decisão e alternativas na [ADR-0031 do Domino](../../../mss-domino-server/docs/adr/0031-cliente-desktop-em-repositorio-legado.md), no molde da [TchowStrick:ADR-0020](../../../mss-tchowstrick-server/docs/adr/0020-cliente-desktop-em-repositorio-legado.md). Dependências, APIs consumidas e versão em [compatibilidade](../compatibilidade.md). Sem mudança de contrato, dados ou operação de produção.
 
 Desvios deliberados do conteúdo copiado: apenas o `pom.xml` (refeito como autônomo; `groupId`, `artifactId`, `version`, `finalName` e `main.class` mantidos) e o caminho do jar no `run.cmd` (`%~dp0target\domino-client.jar`).
 

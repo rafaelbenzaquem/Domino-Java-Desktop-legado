@@ -20,7 +20,7 @@ atualizado_em: 2026-10-09
 
 O jogador do cliente Swing entra (ou cria) a conta MSS e joga num servidor do Dominó que exige conta — o oficial `domino.minashonsoftware.com.br:443` ou um servidor local com identidade —, com várias janelas no mesmo usuário do Windows, cada uma com a sua conta. LAN, `--embedded-server` e servidores sem conta continuam exatamente como antes.
 
-Lado cliente do [Domino:M7](../../../Domino/docs/marcos/M07-conta-mss.md) (servidor em `DOMINO_IDENTITY_MODE=local|remote`, [Domino:ADR-0032](../../../Domino/docs/adr/0032-conta-mss-modos-local-remote.md)) e do preset oficial do Domino:M6-06. Modelo: [TchowStrick-Java-Desktop-Legado:M1](../../../TchowStrick-Java-Desktop-Legado/docs/marcos/M01-identidade-mss.md), na versão mais madura (branch `fix/mensagens-conta-mss`, com BUG-002/003 corrigidos).
+Lado cliente do [Domino:M7](../../../mss-domino-server/docs/marcos/M07-conta-mss.md) (servidor em `DOMINO_IDENTITY_MODE=local|remote`, [Domino:ADR-0032](../../../mss-domino-server/docs/adr/0032-conta-mss-modos-local-remote.md)) e do preset oficial do Domino:M6-06. Modelo: [TchowStrick-Java-Desktop-Legado:M1](../../../mss-tchowstrick-client-desktop-legado/docs/marcos/M01-identidade-mss.md), na versão mais madura (branch `fix/mensagens-conta-mss`, com BUG-002/003 corrigidos).
 
 ## Escopo
 
@@ -86,16 +86,16 @@ Lado cliente do [Domino:M7](../../../Domino/docs/marcos/M07-conta-mss.md) (servi
 | Verificação | Diretório / revisão | Resultado |
 |---|---|---|
 | `./mvnw -B -ntp verify` | worktree `.claude/worktrees/DominoLegado-m1`, `feature/m1-conta-mss` @ `0c68bdb` (código), contra `domino-server 1.0-SNAPSHOT` já instalado no Maven local e `identity-client-java 1.0-SNAPSHOT` do Maven local | `BUILD SUCCESS`; 236 testes, 0 falhas, 1 ignorado (`GrpcStagingTlsTest`); os 125 anteriores continuam passando (1 teste ajustado: o embutido agora tem um preset oficial); `spotless:check` OK |
-| Textos de erro do servidor | `Domino` worktree `feature/m7-conta-mss` @ `47e58fe`, `AccountGuard.java` e `GrpcHostTransport.java` (constatado no código) | Mesmos textos casados por `GrpcErrors`, inclusive "esta conta já ocupa um lugar nesta partida" |
+| Textos de erro do servidor | `mss-domino-server` worktree `feature/m7-conta-mss` @ `47e58fe`, `AccountGuard.java` e `GrpcHostTransport.java` (constatado no código) | Mesmos textos casados por `GrpcErrors`, inclusive "esta conta já ocupa um lugar nesta partida" |
 | `./mvnw -B -ntp verify` depois da reinstalação do servidor do M7 | este worktree, código de `feature/m1-conta-mss` com o ajuste `ALREADY_SEATED`, contra `domino-server 1.0-SNAPSHOT` de `47e58fe` (jar de 08/10/2026 22:31) | `BUILD SUCCESS`; 237 testes, 0 falhas, 1 ignorado; `spotless:check` OK |
 
 Testes novos: `GrpcClientTransportAccountTest` (Bearer em toda chamada, sem cabeçalho sem conta, nova tentativa única, sem laço, recusas por caso, falha local não sai do cliente, keepalive, reabertura do stream, sem conta em texto puro remoto), `GrpcErrorsTest`, `IdentityPresetTest`, `IdentityLaunchTest`, `DataProfileTest`, `LocalAccountsServiceTest`, `LocalStoresIdentityTest`, e portados do legado do TchowStrick: `MssAccountFlowTest`, `IdentityClientGatewayTest` (identidade falsa em processo), `IdentityGameCredentialsTest`, `AccountStateDerivationTest`, `LocalIdentitySessionStoreTest`.
 
-**Não executado:** interface gráfica; fluxo contra a identidade local real (o `MSSIdentity/compose.yaml` não estava no ar nesta tarefa); jogo ponta a ponta contra o servidor em `remote`; servidor oficial (nunca nesta tarefa).
+**Não executado:** interface gráfica; fluxo contra a identidade local real (o `mss-identity-server/compose.yaml` não estava no ar nesta tarefa); jogo ponta a ponta contra o servidor em `remote`; servidor oficial (nunca nesta tarefa).
 
 ### Verificação ponta a ponta pelo orquestrador (08/10/2026)
 
-**Verificado por execução** (orquestrador, Windows 11, JDK 21.0.2, Docker 28.5.1, dados sintéticos `@exemplo.local`): identidade local pelo `MSSIdentity/compose.yaml` (imagem `mss-identity:local`, segredos fictícios); servidor Dominó `feature/m7-conta-mss` @ `47e58fe` pelo `deploy/compose.identidade-local.yml` (jar de 08/10 22:31) em `remote`; cliente `Domino-Java-Desktop-legado` `feature/m1-conta-mss` @ `9823d1b` (`target/domino-client.jar` regenerado), exercitado por um harness Java descartável fora dos repositórios que usa as classes reais do cliente (`IdentityClientGateway`, `IdentityGameCredentials`, `GrpcClientTransport`, `GrpcErrors`). Sem interface gráfica.
+**Verificado por execução** (orquestrador, Windows 11, JDK 21.0.2, Docker 28.5.1, dados sintéticos `@exemplo.local`): identidade local pelo `mss-identity-server/compose.yaml` (imagem `mss-identity:local`, segredos fictícios); servidor Dominó `feature/m7-conta-mss` @ `47e58fe` pelo `deploy/compose.identidade-local.yml` (jar de 08/10 22:31) em `remote`; cliente `mss-domino-client-desktop-legado` `feature/m1-conta-mss` @ `9823d1b` (`target/domino-client.jar` regenerado), exercitado por um harness Java descartável fora dos repositórios que usa as classes reais do cliente (`IdentityClientGateway`, `IdentityGameCredentials`, `GrpcClientTransport`, `GrpcErrors`). Sem interface gráfica.
 
 | # | Cenário | Resultado no cliente |
 |---|---|---|

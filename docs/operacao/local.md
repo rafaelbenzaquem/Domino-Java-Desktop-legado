@@ -1,6 +1,6 @@
 # Operação local e arquitetura — Domino Java Desktop (legado)
 
-Conteúdo do cliente extraído de `Domino/docs/operacao/local.md` em 08/10/2026 ([ADR-0031 do Domino](../../../Domino/docs/adr/0031-cliente-desktop-em-repositorio-legado.md)). Servidor dedicado, containers, persistência e staging continuam documentados na [operação do Domino](../../../Domino/docs/operacao/local.md).
+Conteúdo do cliente extraído de `mss-domino-server/docs/operacao/local.md` em 08/10/2026 ([ADR-0031 do Domino](../../../mss-domino-server/docs/adr/0031-cliente-desktop-em-repositorio-legado.md)). Servidor dedicado, containers, persistência e staging continuam documentados na [operação do Domino](../../../mss-domino-server/docs/operacao/local.md).
 
 Comandos a executar na raiz deste repositório, salvo indicação. Builds podem baixar dependências e escrevem no repositório Maven local do usuário; operações que escrevem fora do portfólio exigem registrar impedimento conforme as [regras comuns](../../../AGENTS.md). O cliente grava perfil local, escolha de servidor, tokens de sessão e a sessão da conta MSS nas `Preferences` do usuário do SO, e um arquivo de trava por janela em `~/.domino/perfis/` (ou em `-Ddomino.data.dir=`), ao ser executado. Operação de produção é exclusiva do responsável autorizado.
 
@@ -19,12 +19,12 @@ app     — MatchController (eventos na EDT) + ClientEventBus + ClientGameView
 ui      — Swing: MainWindow (conectar → lista → lobby → jogo), BoardView vetorial
 ```
 
-Regra de dependência: `app` importa `net`+`domain`; `ui` importa `app` e nunca `net.grpc`. O `Main` depende de `domino-server` em *compile scope* porque embarca um `GrpcHostTransport` real para `--embedded-server` ([ADR-0020 do Domino](../../../Domino/docs/adr/0020-servidor-embarcado-no-cliente.md)) — a única aresta "cliente → servidor", deliberada ([ADR-0026 do Domino](../../../Domino/docs/adr/0026-multi-modulo.md)). Artefatos e APIs consumidos: [compatibilidade](../compatibilidade.md).
+Regra de dependência: `app` importa `net`+`domain`; `ui` importa `app` e nunca `net.grpc`. O `Main` depende de `domino-server` em *compile scope* porque embarca um `GrpcHostTransport` real para `--embedded-server` ([ADR-0020 do Domino](../../../mss-domino-server/docs/adr/0020-servidor-embarcado-no-cliente.md)) — a única aresta "cliente → servidor", deliberada ([ADR-0026 do Domino](../../../mss-domino-server/docs/adr/0026-multi-modulo.md)). Artefatos e APIs consumidos: [compatibilidade](../compatibilidade.md).
 
 ## Requisitos
 
 - JDK 21+ (o código compila com `release 21`).
-- Checkout do [Domino](../../../Domino/README.md) ao lado deste repositório, na versão indicada em [compatibilidade](../compatibilidade.md).
+- Checkout do [Domino](../../../mss-domino-server/README.md) ao lado deste repositório, na versão indicada em [compatibilidade](../compatibilidade.md).
 - Não precisa ter Maven instalado — use o wrapper `./mvnw` (Linux/macOS/Git Bash) ou `mvnw.cmd` (Windows). O primeiro build baixa o Maven e os plugins.
 - Docker **não** é necessário aqui: os testes deste repositório sobem o servidor em memória, no próprio processo. Docker continua necessário para o `verify` completo do Domino (Testcontainers); por isso o passo 1 abaixo pula os testes.
 
@@ -56,7 +56,7 @@ Como `domino.version` é `SNAPSHOT`, o build usa o que estiver instalado no Mave
 run.cmd                               # Windows — ou: java -jar target\domino-client.jar
 ```
 
-Para jogar em rede local com o servidor dedicado, suba-o primeiro no Domino ([operação do Domino](../../../Domino/docs/operacao/local.md), `docker compose up -d --build` ou `run-server.cmd`) e abra dois ou mais clientes.
+Para jogar em rede local com o servidor dedicado, suba-o primeiro no Domino ([operação do Domino](../../../mss-domino-server/docs/operacao/local.md), `docker compose up -d --build` ou `run-server.cmd`) e abra dois ou mais clientes.
 
 Em cada cliente: a barra **"Servidor: `<nome>`"** no topo já mostra pra onde vai conectar (padrão: preset "Oficial" do `servers.json` embutido, `domino.minashonsoftware.com.br:443`, desde 09/10/2026; para jogar em LAN, escolha "Local" — `localhost:1099` — uma vez e a escolha fica salva) — **Trocar servidor…** abre a lista de presets + busca em LAN + endereço personalizado (ADR-0022 do Domino), sem digitar host/porta no caminho comum. **Conectar** → **Criar partida** (modo "um contra todos", 2–4 jogadores, Aberta ou Fechada com senha — ADR-0014) ou **Entrar** por uma da lista (que se atualiza sozinha a cada ~4s; partidas 🔒 pedem a senha antes) → no lobby, a partida começa quando enche ou o criador clica **Começar**. Compra do dorme e passe são automáticos; jogada fora da vez é recusada pelo servidor. Fechar a janela do cliente encerra o processo (não fica nada rodando em segundo plano).
 
@@ -163,4 +163,4 @@ Funciona igual não importa de onde for chamado (PowerShell, `cmd`, Git Bash). S
 - **Spotless** (`google-java-format`, mesma versão e configuração do Domino) — gate de formatação sobre todo o código-fonte; `./mvnw spotless:apply` formata.
 - **JaCoCo** — relatório em `target/site/jacoco/`, sem mínimo (Swing não é testado por unidade neste projeto), como era no módulo do Domino.
 
-Este repositório ainda não tem CI própria; o CI do Domino não builda mais o cliente ([ADR-0031 do Domino](../../../Domino/docs/adr/0031-cliente-desktop-em-repositorio-legado.md)).
+Este repositório ainda não tem CI própria; o CI do Domino não builda mais o cliente ([ADR-0031 do Domino](../../../mss-domino-server/docs/adr/0031-cliente-desktop-em-repositorio-legado.md)).
