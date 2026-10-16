@@ -1,15 +1,15 @@
 # Compatibilidade com o Domino
 
-Registro da dependência deste cliente em relação ao [Domino](../../Domino/README.md). Atualizar ao trocar a versão consumida.
+Registro da dependência deste cliente em relação ao [Domino](../../mss-domino-server/README.md). Atualizar ao trocar a versão consumida.
 
 ## Origem do código
 
 | Campo | Valor |
 |---|---|
-| Repositório de origem | `Domino` (remoto `origin` do checkout do portfólio) |
+| Repositório de origem | `mss-domino-server` (remoto `origin` do checkout do portfólio) |
 | Caminho de origem | `domino-client-desktop/` (e `run.cmd`, `mvnw`, `mvnw.cmd`, `.mvn/wrapper/`, `.gitattributes`, `.editorconfig` da raiz) |
 | Revisão de origem | `main` @ `acaefff` (08/10/2026) |
-| Decisão | [Domino:ADR-0031](../../Domino/docs/adr/0031-cliente-desktop-em-repositorio-legado.md) |
+| Decisão | [Domino:ADR-0031](../../mss-domino-server/docs/adr/0031-cliente-desktop-em-repositorio-legado.md) |
 | Conferência | Detalhes e resultado na [verificação do M0](marcos/M00-extracao-do-domino.md) (seção "Verificações") |
 
 ## Artefatos consumidos
@@ -17,7 +17,7 @@ Registro da dependência deste cliente em relação ao [Domino](../../Domino/REA
 | Artefato | Declarado no `pom.xml` | Uso no cliente |
 |---|---|---|
 | `br.com.mss.domino:domino-net-common` | sim | `GameTransport`/`GameEvent`/`GameEventListener`, `TransportException`, `SessionExpiredException`, `net.dto.*`, `DtoMapper`, `ProtoMapper`, `NetworkConfig`, `net.discovery.DiscoveredServer`/`DiscoveryProtocol` |
-| `br.com.mss.domino:domino-server` | sim (escopo `compile`) | `net.grpc.GrpcHostTransport` (host embarcado do `--embedded-server`, [Domino:ADR-0020](../../Domino/docs/adr/0020-servidor-embarcado-no-cliente.md), aresta deliberada da [Domino:ADR-0026](../../Domino/docs/adr/0026-multi-modulo.md)); nos testes, também `net.MatchService` |
+| `br.com.mss.domino:domino-server` | sim (escopo `compile`) | `net.grpc.GrpcHostTransport` (host embarcado do `--embedded-server`, [Domino:ADR-0020](../../mss-domino-server/docs/adr/0020-servidor-embarcado-no-cliente.md), aresta deliberada da [Domino:ADR-0026](../../mss-domino-server/docs/adr/0026-multi-modulo.md)); nos testes, também `net.MatchService` |
 | `br.com.mss.domino:domino-proto` | transitivo | Stubs gRPC `DominoHostGrpc` e mensagens (`net.grpc.proto.*`) usados pelo `GrpcClientTransport` e pelos testes |
 | `br.com.mss.domino:domino-domain` | transitivo | Regras puras (`domain.*`, `domain.setup.Dealer` nos testes) |
 | `br.com.mss.domino:domino` (pom agregador) | transitivo | Parent dos artefatos acima: fornece as versões das dependências transitivas deles |
@@ -47,7 +47,7 @@ Versão: propriedade `domino.version` do [pom.xml](../pom.xml), hoje `1.0-SNAPSH
 
 O `domino-server` instalado é o jar sombreado do servidor (inclui dependências), exatamente como o reactor do Domino o entregava ao módulo do cliente; o cliente usa só as classes acima. As demais versões (gRPC 1.68.1, gson, SLF4J/Logback, JUnit, jqwik, plugins) foram copiadas do agregador do Domino em `acaefff`; ao mudá-las lá, conferir aqui.
 
-O contrato de rede segue o [protobuf do Domino](../../Domino/domino-proto/src/main/proto/); mudanças incompatíveis lá exigem rebuild e teste deste cliente.
+O contrato de rede segue o [protobuf do Domino](../../mss-domino-server/domino-proto/src/main/proto/); mudanças incompatíveis lá exigem rebuild e teste deste cliente.
 
 ## Testes que cruzam os repositórios
 

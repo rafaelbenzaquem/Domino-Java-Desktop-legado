@@ -1,6 +1,6 @@
 # Domino Java Desktop (legado)
 
-Cliente desktop Java 21/Swing do Dominó, com partida em rede via gRPC, servidor embarcado para LAN (`--embedded-server`), TLS opcional por servidor, conta MSS em servidores com identidade (inclusive o oficial), perfis locais, estatísticas e ranking. Extraído do módulo `domino-client-desktop` do [Domino](../Domino/README.md) em 08/10/2026 ([ADR-0031 de lá](../Domino/docs/adr/0031-cliente-desktop-em-repositorio-legado.md)); depende dos artefatos `domino-domain`, `domino-proto`, `domino-net-common` e `domino-server` daquele repositório e não hospeda outro servidor autoritativo.
+Cliente desktop Java 21/Swing do Dominó, com partida em rede via gRPC, servidor embarcado para LAN (`--embedded-server`), TLS opcional por servidor, conta MSS em servidores com identidade (inclusive o oficial), perfis locais, estatísticas e ranking. Extraído do módulo `domino-client-desktop` do [Domino](../mss-domino-server/README.md) em 08/10/2026 ([ADR-0031 de lá](../mss-domino-server/docs/adr/0031-cliente-desktop-em-repositorio-legado.md)); depende dos artefatos `domino-domain`, `domino-proto`, `domino-net-common` e `domino-server` daquele repositório e não hospeda outro servidor autoritativo.
 
 Estado: extração ([M0](docs/marcos/M00-extracao-do-domino.md)) e conta MSS/servidor oficial ([M1](docs/marcos/M01-conta-mss.md)) integrados e validados pelo responsável (M1 também contra o servidor oficial, publicado em 09/10/2026). O preset "Oficial" (`domino.minashonsoftware.com.br:443`, TLS, conta MSS) é o servidor padrão; "Local" continua na lista de **Trocar servidor…**.
 
@@ -10,7 +10,7 @@ Comece pelo [índice](docs/README.md), [compatibilidade](docs/compatibilidade.md
 
 O cliente não está em nenhum repositório Maven público. Ele depende de:
 
-- `domino-net-common` e `domino-server` (e, por eles, `domino-domain` e `domino-proto`), que só existem no Maven local depois do `install` do [Domino](../Domino/README.md);
+- `domino-net-common` e `domino-server` (e, por eles, `domino-domain` e `domino-proto`), que só existem no Maven local depois do `install` do [Domino](../mss-domino-server/README.md);
 - `br.com.mss.identity:identity-client-java`, do [MSSIdentity](https://github.com/rafaelbenzaquem/mss-identity), que vem do GitHub Packages (com token) ou do Maven local.
 
 **Sintoma típico:** `Could not transfer artifact br.com.mss.domino:domino-net-common:pom:1.0-SNAPSHOT from/to github-mss-identity (https://maven.pkg.github.com/rafaelbenzaquem/mss-identity): status code: 401`. Significa que o Domino não foi instalado neste computador: sem os artefatos no Maven local, o Maven os procura no único repositório remoto que aceita SNAPSHOT (o GitHub Packages do `mss-identity`), que exige credencial e nem os tem. O mesmo 401 para `identity-client-java` significa que falta o token (passo 2).
