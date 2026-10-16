@@ -33,7 +33,7 @@ Regra de dependência: `app` importa `net`+`domain`; `ui` importa `app` e nunca 
 1. No Domino, instalar `domino-domain`, `domino-proto`, `domino-net-common`, `domino-server` (e o pom agregador) no repositório Maven local:
 
    ```bash
-   cd ../Domino
+   cd ../mss-domino-server
    ./mvnw -B -ntp -DskipTests install
    ```
 

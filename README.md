@@ -10,7 +10,7 @@ Comece pelo [índice](docs/README.md), [compatibilidade](docs/compatibilidade.md
 
 O cliente não está em nenhum repositório Maven público. Ele depende de:
 
-- `domino-net-common` e `domino-server` (e, por eles, `domino-domain` e `domino-proto`), que só existem no Maven local depois do `install` do [Domino](../Domino/README.md);
+- `domino-net-common` e `domino-server` (e, por eles, `domino-domain` e `domino-proto`), que só existem no Maven local depois do `install` do [Domino](../mss-domino-server/README.md);
 - `br.com.mss.identity:identity-client-java`, do [MSSIdentity](https://github.com/rafaelbenzaquem/mss-identity), que vem do GitHub Packages (com token) ou do Maven local.
 
 **Sintoma típico:** `Could not transfer artifact br.com.mss.domino:domino-net-common:pom:1.0-SNAPSHOT from/to github-mss-identity (https://maven.pkg.github.com/rafaelbenzaquem/mss-identity): status code: 401`. Significa que o Domino não foi instalado neste computador: sem os artefatos no Maven local, o Maven os procura no único repositório remoto que aceita SNAPSHOT (o GitHub Packages do `mss-identity`), que exige credencial e nem os tem. O mesmo 401 para `identity-client-java` significa que falta o token (passo 2).
