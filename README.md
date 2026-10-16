@@ -15,7 +15,7 @@ O cliente não está em nenhum repositório Maven público. Ele depende de:
 
 **Sintoma típico:** `Could not transfer artifact br.com.mss.domino:domino-net-common:pom:1.0-SNAPSHOT from/to github-mss-identity (https://maven.pkg.github.com/rafaelbenzaquem/mss-identity): status code: 401`. Significa que o Domino não foi instalado neste computador: sem os artefatos no Maven local, o Maven os procura no único repositório remoto que aceita SNAPSHOT (o GitHub Packages do `mss-identity`), que exige credencial e nem os tem. O mesmo 401 para `identity-client-java` significa que falta o token (passo 2).
 
-Requisitos: JDK 21+ e Git. Maven não é necessário (wrapper `./mvnw`; no Windows `mvnw.cmd`).
+Requisitos: **JDK 21** (LTS) e Git. Maven não é necessário (wrapper `./mvnw`; no Windows `mvnw.cmd`). O código compila com `release 21`, mas o build deste repositório e do Domino usa o plugin Spotless (`google-java-format`), que depende de APIs internas do `javac`; JDKs mais novos (ex.: 24+, testado com a 27) quebram o `spotless:check` com `NoSuchMethodError`. Instale/aponte o `JAVA_HOME` para uma JDK 21 ao buildar (ex.: `brew install openjdk@21` no macOS); rodar o jar já empacotado numa JRE mais nova funciona normalmente.
 
 1. **Clonar lado a lado:**
 
@@ -52,8 +52,10 @@ Requisitos: JDK 21+ e Git. Maven não é necessário (wrapper `./mvnw`; no Windo
 3. **Instalar o Domino pela raiz** (não por um módulo isolado; sem testes, que exigem Docker):
 
    ```bash
-   cd Domino && ./mvnw -B -ntp -DskipTests install && cd ..
+   cd Domino && ./mvnw -B -ntp -DskipTests -Djacoco.skip=true install && cd ..
    ```
+
+   O `-Djacoco.skip=true` é necessário junto com `-DskipTests`: o `domino-server` tem um `jacoco:check` de cobertura mínima (70%) amarrado à fase `verify`, que o `install` também executa; sem testes rodando, a cobertura fica próxima de zero e o build falha nessa checagem (não no código) se só `-DskipTests` for usado.
 
 4. **Buildar e abrir o cliente:**
 
